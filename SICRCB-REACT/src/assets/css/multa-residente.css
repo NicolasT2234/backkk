@@ -1,0 +1,343 @@
+.multas-page {
+  background-color: #fff3e0;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Patrón sutil de fondo */
+.multas-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    #8c3200 0.5px,
+    transparent 0.5px
+  );
+  background-size: 22px 22px;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+
+/* Contenedor principal */
+.multas-container {
+  position: relative;
+  z-index: 1;
+
+  max-width: 960px;
+  width: 100%;
+
+  margin: 0 auto;
+
+  padding: 2rem 1rem 3rem;
+
+  flex: 1 0 auto;
+}
+
+
+/* Footer */
+.multas-page footer,
+.multas-page .footer {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+
+/* Título */
+.multas-titulo {
+  color: rgb(140, 50, 0);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-bottom: 1.5rem;
+}
+
+
+/* Tabs */
+.multas-tabs .nav-link {
+  color: rgb(140, 50, 0);
+  font-weight: 500;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+}
+
+
+.multas-tabs .nav-link:hover {
+  color: #8c3200;
+  border-bottom-color: #FFD0A0;
+}
+
+
+.multas-tabs .nav-link.active {
+  color: rgb(140, 50, 0) !important;
+  background: transparent !important;
+  border-bottom-color: rgb(140, 50, 0) !important;
+  font-weight: 700;
+}
+
+
+/* Tabla */
+.multas-tabla-wrapper {
+  border: 1px solid #FFD0A0;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(140, 50, 0, 0.08);
+}
+
+
+.multas-tabla thead {
+  background-color: #FFD0A0;
+}
+
+
+.multas-tabla thead th {
+  color: rgb(140, 50, 0);
+  font-weight: 600;
+  border: none;
+  padding: 0.85rem 1rem;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.4px;
+}
+
+
+.multas-tabla tbody td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+  border-color: #ffe6cc;
+  font-size: 0.95rem;
+  color: #4a3226;
+}
+
+
+.multas-tabla tbody tr:hover {
+  background-color: #fff8f0;
+}
+
+
+.multas-vacio {
+  color: #a37b5e;
+  font-style: italic;
+  padding: 2rem 0;
+}
+
+
+/* Badges de estado */
+.badge-pendiente {
+  background-color: #ffb84d !important;
+  color: #4a2e00;
+}
+
+
+.badge-pagada {
+  background-color: #6fbf73 !important;
+  color: #12321a;
+}
+
+
+.badge-vencida {
+  background-color: #e6543f !important;
+  color: #fff;
+}
+
+
+.badge-anulada {
+  background-color: #b0b0b0 !important;
+  color: #2e2e2e;
+}
+
+
+.multas-badge {
+  padding: 0.4em 0.8em;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+
+/* Spinner */
+.multas-spinner {
+  color: rgb(140, 50, 0);
+}
+
+
+/* Responsive */
+@media (max-width: 576px) {
+  .multas-titulo {
+    font-size: 1.3rem;
+  }
+
+  .multas-tabla thead th,
+  .multas-tabla tbody td {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Acciones (botones) - estilos compartidos con alquiler-admin */
+.acciones-cell {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.acciones-cell .btn.btn-aprobar,
+.acciones-cell button.btn-aprobar {
+  background-color: #6fbf73 !important;
+  border: none !important;
+  color: #12321a !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.acciones-cell .btn.btn-aprobar:hover,
+.acciones-cell button.btn-aprobar:hover {
+  background-color: #5aa860 !important;
+  border: none !important;
+  transform: translateY(-1px);
+  box-shadow: none !important;
+}
+
+.acciones-cell .btn.btn-aprobar:focus,
+.acciones-cell button.btn-aprobar:focus,
+.acciones-cell .btn.btn-aprobar:active,
+.acciones-cell button.btn-aprobar:active {
+  background-color: #5aa860 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.acciones-cell .btn.btn-rechazar,
+.acciones-cell button.btn-rechazar {
+  background-color: #e6543f !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.acciones-cell .btn.btn-rechazar:hover,
+.acciones-cell button.btn-rechazar:hover {
+  background-color: #cc4633 !important;
+  border: none !important;
+  transform: translateY(-1px);
+  box-shadow: none !important;
+}
+
+.acciones-cell .btn.btn-rechazar:focus,
+.acciones-cell button.btn-rechazar:focus,
+.acciones-cell .btn.btn-rechazar:active,
+.acciones-cell button.btn-rechazar:active {
+  background-color: #cc4633 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.acciones-cell .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 576px) {
+  .acciones-cell { flex-direction: column; }
+}
+
+/* También aplicar a variantes Bootstrap comunes si no existen clases específicas */
+.multas-page .acciones-cell .btn.btn-success,
+.multas-page .acciones-cell button.btn-success {
+  background-color: #6fbf73 !important;
+  border: none !important;
+  color: #12321a !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.multas-page .acciones-cell .btn.btn-success:hover,
+.multas-page .acciones-cell button.btn-success:hover {
+  background-color: #5aa860 !important;
+  transform: translateY(-1px);
+  box-shadow: none !important;
+}
+
+.multas-page .acciones-cell .btn.btn-danger,
+.multas-page .acciones-cell button.btn-danger {
+  background-color: #e6543f !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.multas-page .acciones-cell .btn.btn-danger:hover,
+.multas-page .acciones-cell button.btn-danger:hover {
+  background-color: #cc4633 !important;
+  transform: translateY(-1px);
+  box-shadow: none !important;
+}
+
+/* Estilos para pestañas (Todas / Pendientes / Pagadas) usando el mismo look que alquiler-admin */
+/* Estilos para pestañas (Todas / Pendientes / Pagadas) usando el mismo look que alquiler-admin */
+.multas-page .custom-tabs .nav-item .nav-link,
+.multas-page .custom-tabs .nav-link,
+.multas-page .custom-tabs.nav .nav-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: rgb(140, 50, 0) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  border-radius: 12px !important;
+  padding: 0.45rem 0.9rem !important;
+  margin-right: 0.5rem !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.multas-page .custom-tabs .nav-item .nav-link:hover,
+.multas-page .custom-tabs .nav-link:hover,
+.multas-page .custom-tabs.nav .nav-link:hover {
+  background-color: rgb(155, 60, 5) !important;
+  transform: translateY(-1px) !important;
+  color: #fff !important;
+}
+
+.multas-page .custom-tabs .nav-item.show .nav-link.active,
+.multas-page .custom-tabs .nav-item .nav-link.active,
+.multas-page .custom-tabs .nav-link.active,
+.multas-page .custom-tabs .nav-link.show {
+  background-color: rgb(155, 60, 5) !important;
+  transform: translateY(-2px) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 576px) {
+  .multas-page .custom-tabs .nav-item .nav-link,
+  .multas-page .custom-tabs .nav-link { width: 100% !important; margin-right: 0 !important; margin-bottom: 0.5rem !important; }
+}

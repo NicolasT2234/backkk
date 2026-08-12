@@ -1,0 +1,345 @@
+/* Dashboard Styles - Consistent with SICRCB design system */
+
+/* Root Variables (mirroring other pages) */
+:root {
+    --primary: #8C3200;      /* Dark orange/brown - used for headers, active nav */
+    --accent: #FFD0A0;       /* Light peach - used for accents, inputs, bands */
+    --background: #fff3e0;   /* Cream/off-white - page background */
+    --text-dark: #8C3200;    /* Same as primary for dark text */
+    --text-light: #fff3e0;   /* Same as background for light text */
+    --border: #FFD0A0;       /* Accent for borders */
+    --success: #2e7d32;      /* Green for success messages */
+    --danger: #8C3200;       /* Reuse primary for danger/actions */
+    --shadow: 0 14px 36px rgba(140, 50, 0, 0.4);
+}
+
+/* Page base */
+.dashboard-page {
+    background-color: var(--background);
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    min-height: 100vh;
+}
+
+/* Header styling - matches other pages exactly */
+.dashboard-page h1 {
+    background-color: var(--primary);
+    border-radius: 15px;
+    margin: 3vh auto 3vh auto;
+    text-align: center;
+    color: var(--text-light);
+    width: fit-content;
+    padding: 6px 40px;
+    font-size: 26px;
+    animation: slideDown 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Subtitle band - matches other pages */
+.dashboard-page .subtitulo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2.5vh;
+    animation: slideDown 0.5s cubic-bezier(0.23, 1, 0.32, 1) 0.1s both;
+}
+
+.dashboard-page .subtitulo-banda {
+    background-color: var(--accent);
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 20px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+/* Grid container - matches other pages */
+.dashboard-page .grid-noticias {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    padding: 0 5vw 5vh 5vw;
+}
+
+/* Card-like container ( matches .a-noticia ,               �
+/* Card container - matches .a-noticia from Alquiler, Multas, Noticias */
+.dashboard-page .a-noticia {
+    background-color: rgb(140, 50, 0); /* same as primary */
+    text-align: center;
+    color: var(--text-light);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+
+    animation: fadeUp 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Staggered animation delays - same as other pages */
+.dashboard-page .a-noticia:nth-child(1) { animation-delay: 0.05s; }
+.dashboard-page .a-noticia:nth-child(2) { animation-delay: 0.12s; }
+.dashboard-page .a-noticia:nth-child(3) { animation-delay: 0.19s; }
+.dashboard-page .a-noticia:nth-child(4) { animation-delay: 0.26s; }
+
+/* Hover effect - matches other pages */
+.dashboard-page .a-noticia::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0);
+    transition: background 0.3s;
+    border-radius: 14px;
+    pointer-events: none;
+}
+
+.dashboard-page .a-noticia:hover::before {
+    background: rgba(255, 25,⁨255,255,0.05);
+}
+
+.dashboard-page .a-noticia:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+}
+
+/* Fade up animation - identical to other pages */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Slide down animation - identical to other pages */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Card inner elements - consistent typography */
+.dashboard-page .a-noticia legend {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 0;
+}
+
+.dashboard-page .a-noticia h6 {
+    text-align: center;
+    margin: 0 auto;
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.dashboard-page .a-noticia hr {
+    width: 100%;
+    border-color: rgba(255, 240, 224, 0.25);
+    margin: 4px 0;
+}
+
+.dashboard-page .a-noticia .form-label {
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 2px;
+}
+
+/* Stats Grid - uses cards similar to other dashboard cards */
+.dashboard-page .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.dashboard-page .stat-card {
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    transition: background-color 0.2s;
+}
+
+.dashboard-page .stat-card:hover {
+    background-color: rgba(255,255,255,0.15);
+}
+
+.dashboard-page .stat-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: var(--accent);
+}
+
+.dashboard-page .stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-light);
+    margin: 0;
+}
+
+/* Quick Actions - uses same button styling as other pages */
+.dashboard-page .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Activity List */
+.dashboard-page .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dashboard-page .activity-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.dashboard-page .activity-time {
+    font-size: 12px;
+    color: var(--accent);
+}
+
+.dashboard-page .activity-desc {
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+/* Status Indicators */
+.dashboard-page .status-indicators {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.dashboard-page .status-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.dashboard-page .status-label {
+    font-size: 13px;
+    color: var(--accent);
+}
+
+.dashboard-page .status-value {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.dashboard-page .status-value.status-ok {
+    color: var(--accent);
+}
+
+/* Buttons - reuse existing classes from other pages (btn-success, btn-danger) */
+/* Ensure they match the look from other pages - already using btn-success */
+/* For completeness, ensure button base style matches existing .auth-page button */
+.dashboard-page button {
+    appearance: none;
+    background-color: transparent;
+    border: 2px solid #f3f3f3;
+    border-radius: 20px;
+    box-sizing: border-box;
+    color: #f3f3f3;
+    cursor: pointer;
+    display: inline-block;
+    font-family: Roobert, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: normal;
+    margin: 4px 0;
+    min-height: 2.8em;
+    min-width: 120px;
+    outline: none;
+    padding: 0.6em 2em;
+    text-align: center;
+    text-decoration: none;
+    letter-spacing: 0.4px;
+    transition: all 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    will-change: transform;
+}
+
+.dashboard-page button:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.dashboard-page button:hover {
+    color: var(--primary);
+    background-color: #f3f3f3;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    transform: translateY(-2px);
+}
+
+.dashboard-page button:active {
+    box-shadow: none;
+    transform: translateY(0);
+}
+
+/* Specific button colors - match other pages */
+.dashboard-page button.btn-success {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dashboard-page button.btn-success:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+}
+
+.dashboard-page button.btn-danger {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dashboard-page button.btn-danger:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+}
+
+/* Responsive - matches other pages */
+@media (max-width: 700px) {
+    .dashboard-page .grid-noticias {
+        grid-template-columns: 1fr;
+        padding: 0 4vw 4vh 4vw;
+    }
+
+    .dashboard-page h1 {
+        font-size: 20px;
+        padding: 6px 24px;
+    }
+
+    .dashboard-page .stats-grid,
+    .dashboard-page .quick-actions,
+    .dashboard-page .status-indicators {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Make certain dashboard items span full width */
+.dashboard-page .full-width {
+    grid-column: 1 / -1;
+}

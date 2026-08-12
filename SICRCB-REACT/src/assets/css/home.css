@@ -1,0 +1,124 @@
+.hero-section {
+    background-color: #8C3200;
+    color: #fff3e0;
+    padding: 80px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section h1 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #fff3e0;
+}
+
+.hero-section p {
+    font-size: 1.25rem;
+    color: #fff3e0;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+/* Features Section */
+.features-section .card {
+    background-color: #fff3e0;
+    color: #8C3200;
+    border: none;
+    border-radius: .5rem;
+}
+
+.features-section .card-title {
+    color: #8C3200;
+    margin-bottom: .75rem;
+}
+
+.features-section .card-text {
+    color: #8C3200;
+    opacity: 0.9;
+}
+
+/* Feature icons container */
+.features-section .feature-icon {
+    width: 80px;
+    height: 80px;
+    background-color: rgba(244, 120, 32, 0.15); /* F47820 con mas opacidad para contraste */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+/* CTA section */
+.cta-section {
+    background-color: #fff3e0;
+    color: #8C3200;
+}
+
+.cta-section h2 {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #8C3200;
+}
+
+.cta-section p {
+    font-size: 1.25rem;
+    color: #8C3200;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+/* Custom button styles matching alquiler.css */
+.btn-outline-custom {
+    border: 2px solid #F47820;
+    color: #F47820;
+    background-color: transparent;
+    border-radius: 20px;
+    padding: 0.6em 2em;
+    font-weight: 700;
+    transition: all 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+}
+.btn-outline-custom:hover {
+    background-color: #F47820;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    transform: translateY(-2px);
+}
+.btn-outline-custom:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+.btn-custom {
+    border: 2px solid #FFD0A0;
+    color: #8C3200;
+    background-color: #FFD0A0;
+    border-radius: 20px;
+    padding: 0.6em 2em;
+    font-weight: 700;
+    transition: all 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+}
+.btn-custom:hover {
+    background-color: #F47820;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    transform: translateY(-2px);
+}
+.btn-custom:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-section {
+        text-align: center;
+    }
+    .hero-section .row {
+        flex-direction: column-reverse;
+    }
+    .hero-section img {
+        margin-bottom: 2rem;
+    }
+}

@@ -1,0 +1,92 @@
+import { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import { ArrowLeft } from "lucide-react"
+import api from "../../services/api"
+
+import "../../assets/css/styles.css"
+
+function Login() {
+  const navigate = useNavigate()
+  const [correo, setCorreo] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError("")
+    try {
+      const res = await api.post("/login", { email: correo, password })
+      localStorage.setItem("token", res.data.accessToken)
+      localStorage.setItem("user", JSON.stringify(res.data.user))
+      // Determine redirect based on role
+      const userRole = res.data.user?.role?.toLowerCase() || ''
+      const isAdmin = userRole === 'admin' || userRole === 'administrador'
+      navigate(isAdmin ? "/dashboard" : "/residente-dashboard")
+    } catch (err) {
+      setError("Correo o contraseña incorrectos")
+    }
+  }
+
+  return (
+    <div className="auth-page">
+      <div className="text-center mb-4">
+        <Link to="/" className="btn-volver">
+          <ArrowLeft size={16} className="mr-2" />
+          Volver al inicio
+        </Link>
+      </div>
+      <div className="titulo">
+        <h1>INICIO DE SESION</h1>
+      </div>
+
+      <form className="formulario" onSubmit={handleSubmit}>
+        <div className="campo">
+          <h2>CORREO</h2>
+          <div className="input-wrapper">
+            <input
+              type="email"
+              placeholder="Ingrese el correo"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="campo">
+          <h2>CONTRASE�ÑA</h2>
+          <div className="input-wrapper">
+            <input
+              type="password"
+              placeholder="Digite su contraseña "
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        {error && (
+          <p style={{ color: "#8C3200", fontStyle: "normal", opacity: 1 }}>{error}</p>
+        )}
+
+        <div className="contenedor">
+          <button type="submit" className="btn-success">
+            Iniciar Sesión
+          </button>
+        </div>
+
+        <div className="iniciar-sesion">
+          <h6>
+            ¿Aún no tienes una cuenta? <Link to="/registro" className="link">Registrate Aqui</Link>
+          </h6>
+          <h6>
+            <Link to="/recuperar" className="link">¿Olvidó su contraseña?</Link>
+          </h6>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+export default Login

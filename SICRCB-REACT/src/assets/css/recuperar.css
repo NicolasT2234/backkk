@@ -1,0 +1,166 @@
+.auth-page {
+  background: linear-gradient(135deg, #fffaf5 0%, #f8f8f8 100%);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  margin: 0;
+  min-height: 100vh;
+}
+
+.auth-page .titulo {
+  margin: 0 auto;
+  width: min(680px, 95%);
+  background-color: #F47820;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding: 20px 32px;
+  text-align: center;
+}
+
+.auth-page .titulo h1 {
+  font-size: 26px;
+  font-weight: 600;
+  color: #FFD0A0;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.auth-page .formulario {
+  margin: 0 auto 40px;
+  width: min(680px, 95%);
+  background-color: #fff;
+  border: 1px solid #f2e4d7;
+  border-top: none;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  padding: 28px 36px 32px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.auth-page .campo {
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.auth-page .campo h2,
+.auth-page .iniciar-sesion {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8C3200;
+  letter-spacing: 0.06em;
+  margin: 0 0 6px;
+}
+
+.auth-page .campos-dobles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.auth-page input,
+.auth-page select {
+  height: 42px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: auto;
+}
+
+.auth-page .input-wrapper {
+  position: relative;
+}
+
+.auth-page .input-wrapper input,
+.auth-page .input-wrapper select {
+  background-color: #fff;
+  border: 1px solid #e5cbb2;
+  padding: 0 14px;
+  font-size: 14px;
+  width: 100%;
+  border-radius: 1rem;
+  color: #8C3200;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  cursor: text;
+}
+
+.auth-page .input-wrapper select:invalid {
+  color: #A89B8C;
+}
+
+.auth-page option:checked {
+  background-color: #FFA552;
+  color: #8C3200;
+}
+
+.auth-page input::placeholder {
+  color: #A89B8C;
+  font-size: 13px;
+}
+
+.auth-page input:focus,
+.auth-page select:focus {
+  border-color: #F47820;
+  box-shadow: 0 0 0 3px rgba(244, 120, 32, 0.15);
+}
+
+.auth-page .link {
+  text-decoration: none;
+  color: #F47820;
+}
+
+.auth-page .link:hover {
+  color: #D4560A;
+}
+
+.auth-page .iniciar-sesion {
+  padding-top: 15px;
+  margin: 0 auto;
+  text-align: center;
+  max-width: 320px;
+}
+
+.auth-page .iniciar-sesion h6 {
+  margin: 0 0 8px;
+}
+
+.auth-page .contenedor {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-page .btn-success {
+  background-color: #F47820;
+  color: #fff;
+  box-shadow: none;
+}
+
+.auth-page .btn-success:hover {
+  background-color: #D4560A;
+}
+
+.auth-page button {
+  --primary-color: #D4560A;
+  --secondary-color: #fff;
+  --hover-color: #8C3200;
+  border: 0;
+  border-radius: 10px;
+  color: var(--secondary-color);
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  transition: background 0.2s;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+
+.auth-page button:hover {
+  background-color: var(--hover-color);
+}
+
+.auth-page select {
+  color: #A89B8C;
+}

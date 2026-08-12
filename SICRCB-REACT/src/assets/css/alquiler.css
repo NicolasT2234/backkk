@@ -1,0 +1,516 @@
+.alquiler-page {
+    background-color: #fff3e0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='100' viewBox='0 0 200 100'><g fill='none' stroke='%238C3200' stroke-width='2' opacity='0.08'><path d='M20 30h40v30a5 5 0 01-5 5H25a5 5 0 01-5-5V30z'/><path d='M20 30a5 5 0 015-5h30a5 5 0 015 5'/><path d='M25 65v15M55 65v15'/><path d='M20 45h40'/><path d='M110 55L150 25l40 30'/><path d='M120 50v25a3 3 0 003 3h54a3 3 0 003-3V50'/><path d='M140 78V60h20v18'/></g></svg>");
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding-top: 0;
+}
+
+
+.alquiler-page h1 {
+    background-color: #8C3200;
+    border-radius: 15px;
+    margin: 3vh auto 3vh auto;
+    text-align: center;
+    color: #fff3e0;
+    width: fit-content;
+    padding: 6px 40px;
+    font-size: 26px;
+    animation: slideDown 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alquiler-page .subtitulo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2.5vh;
+    animation: slideDown 0.5s cubic-bezier(0.23, 1, 0.32, 1) 0.1s both;
+}
+
+.alquiler-page .subtitulo-banda {
+    background-color: #FFD0A0;
+    color: #8C3200;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 20px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+
+.alquiler-page .grid-noticias {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    padding: 0 5vw 5vh 5vw;
+}
+
+
+.alquiler-page .a-noticia {
+    background-color: rgb(140, 50, 0);
+    text-align: center;
+    color: #fff3e0;
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+
+    animation: fadeUp 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.alquiler-page .a-noticia:nth-child(1) { animation-delay: 0.05s; }
+.alquiler-page .a-noticia:nth-child(2) { animation-delay: 0.12s; }
+.alquiler-page .a-noticia:nth-child(3) { animation-delay: 0.19s; }
+.alquiler-page .a-noticia:nth-child(4) { animation-delay: 0.26s; }
+
+.alquiler-page .a-noticia::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0);
+    transition: background 0.3s;
+    border-radius: 14px;
+    pointer-events: none;
+}
+
+.alquiler-page .a-noticia:hover::before {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.alquiler-page .a-noticia:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 36px rgba(140, 50, 0, 0.4);
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alquiler-page .a-noticia legend {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff3e0;
+    margin-bottom: 0;
+}
+
+.alquiler-page .a-noticia h6 {
+    text-align: center;
+    margin: 0 auto;
+    font-size: 14px;
+    color: #fff3e0;
+}
+
+.alquiler-page .a-noticia hr {
+    width: 100%;
+    border-color: rgba(255, 240, 224, 0.25);
+    margin: 4px 0;
+}
+
+.alquiler-page .a-noticia .form-label {
+    font-size: 13px;
+    color: #FFD0A0;
+    margin-bottom: 2px;
+}
+
+.alquiler-page .radio-group {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: center;
+}
+
+.alquiler-page .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #fff3e0;
+    cursor: pointer;
+}
+
+.alquiler-page .container {
+    --input-out-of-focus: #ccc;
+    --main-color: #323232;
+    position: relative;
+    cursor: pointer;
+}
+
+.alquiler-page .container input {
+    position: absolute;
+    opacity: 0;
+}
+
+.alquiler-page .checkmark {
+    width: 28px;
+    height: 28px;
+    position: relative;
+    top: 0;
+    left: 0;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    box-shadow: 3px 3px var(--main-color);
+    background-color: var(--input-out-of-focus);
+    transition: background 0.25s, box-shadow 0.25s;
+}
+
+.alquiler-page .container input:checked ~ .checkmark {
+    background-color: #FFD0A0;
+    box-shadow: 3px 3px #8C3200;
+}
+
+.alquiler-page .checkmark:after {
+    content: "";
+    width: 6px;
+    height: 13px;
+    position: absolute;
+    top: 2px;
+    left: 7px;
+    display: none;
+    border: solid #8C3200;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+}
+
+.alquiler-page .container input:checked ~ .checkmark:after {
+    display: block;
+}
+
+
+.alquiler-page .input {
+    border: 2px solid transparent;
+    width: 100%;
+    max-width: 280px;
+    height: 2.5em;
+    padding-left: 0.8em;
+    outline: none;
+    overflow: hidden;
+    background-color: #f3f3f3;
+    border-radius: 10px;
+    transition: border 0.35s ease, box-shadow 0.35s ease, background 0.35s ease;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.alquiler-page .input:hover,
+.alquiler-page .input:focus {
+    border: 2px solid #FFD0A0;
+    box-shadow: 0 0 0 7px rgba(74, 157, 236, 0.15);
+    background-color: white;
+}
+
+.alquiler-page .input[type="file"] {
+    height: auto;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.alquiler-page .input[type="datetime-local"],
+.alquiler-page .input[type="date"],
+.alquiler-page .input[type="number"] {
+    cursor: pointer;
+}
+
+.alquiler-page select.input {
+    cursor: pointer;
+    padding-right: 0.8em;
+}
+
+
+.alquiler-page p {
+    text-align: center;
+    padding: 5px;
+    font-size: 12px;
+    color: #FFD0A0;
+    margin: 0;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+
+.alquiler-page button {
+    appearance: none;
+    background-color: transparent;
+    border: 2px solid #f3f3f3;
+    border-radius: 20px;
+    box-sizing: border-box;
+    color: #f3f3f3;
+    cursor: pointer;
+    display: inline-block;
+    font-family: Roobert, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: normal;
+    margin: 4px 0;
+    min-height: 2.8em;
+    min-width: 120px;
+    outline: none;
+    padding: 0.6em 2em;
+    text-align: center;
+    text-decoration: none;
+    letter-spacing: 0.4px;
+    transition: all 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    will-change: transform;
+}
+
+.alquiler-page button:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.alquiler-page button:hover {
+    color: #8C3200;
+    background-color: #f3f3f3;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+    transform: translateY(-2px);
+}
+
+.alquiler-page button:active {
+    box-shadow: none;
+    transform: translateY(0);
+}
+
+.alquiler-page button.btn-success {
+    border-color: #FFD0A0;
+    color: #FFD0A0;
+}
+
+.alquiler-page button.btn-success:hover {
+    background-color: #FFD0A0;
+    color: #8C3200;
+}
+
+.alquiler-page .card {
+  overflow: hidden;
+  position: relative;
+  background-color: #fff3e0;
+  text-align: left;
+  border-radius: 0.5rem;
+  max-width: 290px;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+.alquiler-page .header {
+  padding: 1.25rem 1rem 1rem 1rem;
+  background-color: #fff3e0;
+}
+.alquiler-page .image {
+  display: flex;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: #FFD0A0;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+}
+.alquiler-page .image svg {
+  color: #8C3200;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.alquiler-page .content {
+  margin-top: 0.75rem;
+  text-align: center;
+}
+.alquiler-page .title {
+  color: #8C3200;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+}
+.alquiler-page .message {
+  margin-top: 0.5rem;
+  color: #B87040;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.alquiler-page .actions {
+  margin: 0.75rem 1rem;
+  background-color: #fff3e0;
+}
+.alquiler-page .desactivate {
+  display: inline-flex;
+  padding: 0.5rem 1rem;
+  background-color: #8C3200;
+  color: #fff3e0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+  justify-content: center;
+  width: 100%;
+  border-radius: 0.375rem;
+  border-width: 1px;
+  border-color: transparent;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.alquiler-page .cancel {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: #fff3e0;
+  color: #8C3200;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+  justify-content: center;
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid #B87040;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+
+@media (max-width: 700px) {
+    .alquiler-page .grid-noticias {
+        grid-template-columns: 1fr;
+        padding: 0 4vw 4vh 4vw;
+    }
+
+    .alquiler-page h1 {
+        font-size: 20px;
+        padding: 6px 24px;
+    }
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-field {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Panel único con pestañas: reemplaza el grid de 4 tarjetas vacías --- */
+.alquiler-page .panel-container {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0 5vw 5vh 5vw;
+  box-sizing: border-box;
+}
+
+.alquiler-page .panel {
+  width: 100%;
+  align-items: stretch;
+  text-align: center;
+  transform: none;
+}
+
+.alquiler-page .panel::before {
+  display: none;
+}
+
+.alquiler-page .panel:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.alquiler-page .panel .form-label {
+  text-align: center;
+}
+
+.alquiler-page .panel .form-field {
+  align-items: center;
+}
+
+.alquiler-page .panel .form-row {
+  justify-content: center;
+}
+
+.alquiler-page .tabs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.alquiler-page .tabs-bar button {
+  min-width: 0;
+  min-height: 2.2em;
+  padding: 0.4em 1.2em;
+  font-size: 12px;
+  margin: 0;
+}
+
+.alquiler-page .card {
+  margin: 10px auto 0 auto;
+}
+
+/* --- Layout con tarjetas de información a los lados --- */
+.alquiler-page .page-layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 50px;
+  flex-wrap: wrap;
+  padding: 0 4vw 5vh 4vw;
+}
+
+.alquiler-page .panel-container {
+  max-width: 620px;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 480px;
+}
+
+.alquiler-page .side-card {
+  flex: 0 1 230px;
+  max-width: 230px;
+  padding: 18px;
+}
+
+.alquiler-page .side-card p {
+  text-align: left;
+  font-style: normal;
+  opacity: 1;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1050px) {
+  .alquiler-page .side-card {
+    display: none;
+  }
+}
