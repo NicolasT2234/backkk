@@ -4,8 +4,6 @@ import cors from 'cors';
 import pool from './db.js';
 
 // Import routes
-import clienteRoutes from './routes/clientes.js';
-import proveedoresRoutes from './routes/proveedores.js';
 import usuarioRoutes from './routes/usuarios.js';
 import rolRoutes from './routes/roles.js';
 import tipoDocumentoRoutes from './routes/tipoDocumentos.js';
@@ -25,6 +23,8 @@ import salonComunalRoutes from './routes/salonComunal.js';
 import sillaRoutes from './routes/sillas.js';
 import alquilerRoutes from './routes/alquileres.js';
 import alquilerSillaRoutes from './routes/alquilerSilla.js';
+import authRoutes from './routes/auth.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,8 +39,6 @@ app.get('/', (req, res) => {
 });
 
 // API routes
-app.use('/api/clientes', clienteRoutes);
-app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/roles', rolRoutes);
 app.use('/api/tipo-documentos', tipoDocumentoRoutes);
@@ -60,6 +58,8 @@ app.use('/api/salon-comunal', salonComunalRoutes);
 app.use('/api/sillas', sillaRoutes);
 app.use('/api/alquileres', alquilerRoutes);
 app.use('/api/alquiler-silla', alquilerSillaRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 404 handler
 app.use((req, res) => {
