@@ -8,13 +8,13 @@ const router = express.Router();
 router.get('/', verificarToken, async (req, res) => {
   try {
     const [apartamentos] = await pool.query(
-      `SELECT a.id, a.bloque, a.numero, a.metros_cuadrados,
+      `SELECT a.id, a.numero, a.estado,
               b.nombre as bloque_nombre,
               i.descripcion as interior,
               ud.nombre as nombre_propietario, ud.apellido as apellido_propietario
        FROM apartamento a
-       JOIN bloque b ON a.id_bloque = b.id
-       LEFT JOIN interior i ON a.id_interior = i.id
+       JOIN interior i ON a.id_interior = i.id
+       JOIN bloque b ON i.id_bloque = b.id
        LEFT JOIN propietario p ON a.id = p.id_apartamento
        LEFT JOIN user_data ud ON p.id_user_data = ud.id_usuario
        ORDER BY b.nombre, a.numero`
@@ -31,13 +31,13 @@ router.get('/:id', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
     const [apartamentos] = await pool.query(
-      `SELECT a.id, a.bloque, a.numero, a.metros_cuadrados,
+      `SELECT a.id, a.numero, a.estado,
               b.nombre as bloque_nombre,
               i.descripcion as interior,
               ud.nombre as nombre_propietario, ud.apellido as apellido_propietario
        FROM apartamento a
-       JOIN bloque b ON a.id_bloque = b.id
-       LEFT JOIN interior i ON a.id_interior = i.id
+       JOIN interior i ON a.id_interior = i.id
+       JOIN bloque b ON i.id_bloque = b.id
        LEFT JOIN propietario p ON a.id = p.id_apartamento
        LEFT JOIN user_data ud ON p.id_user_data = ud.id_usuario
        WHERE a.id = ?`,
@@ -57,16 +57,16 @@ router.get('/:id', verificarToken, async (req, res) => {
 
 // POST /apartamentos (solo administradores)
 router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { idBloque, numero, metrosCuadrados, idInterior } = req.body;
+  const { numero, estado, idInterior } = req.body;
 
-  if (!idBloque || !numero || !metrosCuadrados) {
-    return res.status(400).json({ error: 'Bloque, número y metros cuadrados requeridos' });
+  if (!numero || !estado || !idInterior) {
+    return res.status(400).json({ error: 'Número, estado y idInterior requeridos' });
   }
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO apartamento (id_bloque, numero, metros_cuadrados, id_interior) VALUES (?, ?, ?, ?)',
-      [idBloque, numero, metrosCuadrados, idInterior || null]
+      'INSERT INTO apartamento (numero, estado, id_interior) VALUES (?, ?, ?)',
+      [numero, estado, idInterior]
     );
     res.status(201).json({ message: 'Apartamento creado exitosamente', id: result.insertId });
   } catch (error) {
@@ -77,10 +77,10 @@ router.post('/', verificarToken, verificarRol('Administrador'), async (req, res)
 
 // PUT /apartamentos/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { idBloque, numero, metrosCuadrados, idInterior } = req.body;
+  const { numero, estado, idInterior } = req.body;
   const { id } = req.params;
 
-  if (!idBloque && !numero && !metrosCuadrados && idInterior === undefined) {
+  if (!numero && !estado && idInterior === undefined) {
     return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
   }
 
@@ -91,17 +91,13 @@ router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     const updates = [];
     const values = [];
 
-    if (idBloque !== undefined) {
-      updates.push('id_bloque = ?');
-      values.push(idBloque);
-    }
     if (numero !== undefined) {
       updates.push('numero = ?');
       values.push(numero);
     }
-    if (metrosCuadrados !== undefined) {
-      updates.push('metros_cuadrados = ?');
-      values.push(metrosCuadrados);
+    if (estado !== undefined) {
+      updates.push('estado = ?');
+      values.push(estado);
     }
     if (idInterior !== undefined) {
       updates.push('id_interior = ?');

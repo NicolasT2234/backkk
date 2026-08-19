@@ -10,4 +10,6 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+console.log('DB_NAME cargado como:', process.env.DB_NAME, '| DB_PASSWORD definido:', !!process.env.DB_PASSWORD);
+
 module.exports = pool;

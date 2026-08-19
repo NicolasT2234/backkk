@@ -1,1 +1,3 @@
+◇ injected env (6) from .env // tip: ⌘ override existing { override: true }
+DB_NAME cargado como: sicrcb
 Servidor ejecutándose en puerto 5000

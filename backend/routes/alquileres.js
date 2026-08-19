@@ -8,16 +8,15 @@ const router = express.Router();
 router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
     const [alquileres] = await pool.query(
-      `SELECT a.id, a.fecha_inicio, a.fecha_fin, a.monto_total, a.estado,
-              ap.bloque, ap.numero, i.descripcion as interior,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario
+      `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado,
+              p.id as id_propietario,
+              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+              s.id as id_salon_comunal
        FROM alquiler a
-       JOIN apartamento ap ON a.id_apartamento = ap.id
-       JOIN bloque b ON ap.id_bloque = b.id
-       JOIN interior i ON ap.id_interior = i.id
        JOIN propietario p ON a.id_propietario = p.id
        JOIN user_data ud ON p.id_user_data = ud.id_usuario
-       ORDER BY a.fecha_inicio DESC`
+       LEFT JOIN salon_comunal s ON a.id_salon_comunal = s.id
+       ORDER BY a.hora_inicio DESC`
     );
     res.json(alquileres);
   } catch (error) {
@@ -31,15 +30,14 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   try {
     const { id } = req.params;
     const [alquileres] = await pool.query(
-      `SELECT a.id, a.fecha_inicio, a.fecha_fin, a.monto_total, a.estado,
-              ap.bloque, ap.numero, i.descripcion as interior,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario
+      `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado,
+              p.id as id_propietario,
+              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+              s.id as id_salon_comunal
        FROM alquiler a
-       JOIN apartamento ap ON a.id_apartamento = ap.id
-       JOIN bloque b ON ap.id_bloque = b.id
-       JOIN interior i ON ap.id_interior = i.id
        JOIN propietario p ON a.id_propietario = p.id
        JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       LEFT JOIN salon_comunal s ON a.id_salon_comunal = s.id
        WHERE a.id = ?`,
       [id]
     );
@@ -57,10 +55,10 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
 
 // POST /alquileres (cualquier usuario autenticado puede crear su propia reserva)
 router.post('/', verificarToken, async (req, res) => {
-  const { idApartamento, fechaInicio, fechaFin, montoTotal } = req.body;
+  const { descripcion, horaInicio, horaFin, valorHora } = req.body;
 
-  if (!idApartamento || !fechaInicio || !fechaFin || !montoTotal) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: idApartamento, fechaInicio, fechaFin, montoTotal' });
+  if (!descripcion || !horaInicio || !horaFin || !valorHora) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: descripcion, horaInicio, horaFin, valorHora' });
   }
 
   const idUsuario = req.usuario.id;
@@ -68,37 +66,23 @@ router.post('/', verificarToken, async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // Verificar que el usuario autenticado es propietario del apartamento
+    // Obtener id_propietario del usuario autenticado
     const [propietario] = await connection.query(
-      'SELECT id FROM propietario WHERE id_user_data = (SELECT id FROM user_data WHERE id_usuario = ?) AND id_apartamento = ?',
-      [idUsuario, idApartamento]
+      'SELECT id FROM propietario WHERE id_user_data = (SELECT id FROM user_data WHERE id_usuario = ?)',
+      [idUsuario]
     );
 
     if (propietario.length === 0) {
       await connection.rollback();
-      return res.status(403).json({ error: 'No tienes permiso para crear una reserva para este apartamento' });
+      return res.status(403).json({ error: 'No se encontró propietario para el usuario autenticado' });
     }
 
     const idPropietario = propietario[0].id;
 
-    // Validar disponibilidad: no overlap con otras reservas activas para el mismo apartamento
-    const [overlap] = await connection.query(
-      `SELECT COUNT(*) as count FROM alquiler
-       WHERE id_apartamento = ?
-         AND estado IN ('Activo', 'Reservado')
-         AND NOT (fecha_fin <= ? OR fecha_inicio >= ?)`,
-      [idApartamento, fechaInicio, fechaFin]
-    );
-
-    if (overlap[0].count > 0) {
-      await connection.rollback();
-      return res.status(409).json({ error: 'El apartamento ya está reservado para las fechas solicitadas' });
-    }
-
     // Insertar alquiler
     const [result] = await connection.query(
-      'INSERT INTO alquiler (id_apartamento, id_propietario, fecha_inicio, fecha_fin, monto_total, estado) VALUES (?, ?, ?, ?, ?, ?)',
-      [idApartamento, idPropietario, fechaInicio, fechaFin, montoTotal, 'Reservado']
+      'INSERT INTO alquiler (id_propietario, id_salon_comunal, descripcion, hora_inicio, hora_fin, valor_hora, estado) VALUES (?, NULL, ?, ?, ?, ?, ?)',
+      [idPropietario, descripcion, horaInicio, horaFin, valorHora, 'Reservado']
     );
 
     await connection.commit();
@@ -114,10 +98,10 @@ router.post('/', verificarToken, async (req, res) => {
 
 // PUT /alquileres/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { fechaInicio, fechaFin, montoTotal, estado } = req.body;
+  const { descripcion, horaInicio, horaFin, valorHora, estado } = req.body;
   const { id } = req.params;
 
-  if (!fechaInicio && !fechaFin && !montoTotal && !estado) {
+  if (!descripcion && !horaInicio && !horaFin && !valorHora && !estado) {
     return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
   }
 
@@ -128,17 +112,21 @@ router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     const updates = [];
     const values = [];
 
-    if (fechaInicio !== undefined) {
-      updates.push('fecha_inicio = ?');
-      values.push(fechaInicio);
+    if (descripcion !== undefined) {
+      updates.push('descripcion = ?');
+      values.push(descripcion);
     }
-    if (fechaFin !== undefined) {
-      updates.push('fecha_fin = ?');
-      values.push(fechaFin);
+    if (horaInicio !== undefined) {
+      updates.push('hora_inicio = ?');
+      values.push(horaInicio);
     }
-    if (montoTotal !== undefined) {
-      updates.push('monto_total = ?');
-      values.push(montoTotal);
+    if (horaFin !== undefined) {
+      updates.push('hora_fin = ?');
+      values.push(horaFin);
+    }
+    if (valorHora !== undefined) {
+      updates.push('valor_hora = ?');
+      values.push(valorHora);
     }
     if (estado !== undefined) {
       updates.push('estado = ?');
@@ -185,18 +173,14 @@ router.get('/mis-alquileres', verificarToken, async (req, res) => {
     const idUsuario = req.usuario.id;
 
     const [alquileres] = await pool.query(
-      `SELECT a.id, a.fecha_inicio, a.fecha_fin, a.monto_total, a.estado,
-              ap.bloque, ap.numero, i.descripcion as interior
+      `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado
        FROM alquiler a
-       JOIN apartamento ap ON a.id_apartamento = ap.id
-       JOIN bloque b ON ap.id_bloque = b.id
-       JOIN interior i ON ap.id_interior = i.id
        WHERE a.id_propietario = (
          SELECT p.id FROM propietario p
          JOIN user_data ud ON p.id_user_data = ud.id_usuario
          WHERE ud.id_usuario = ?
        )
-       ORDER BY a.fecha_inicio DESC`,
+       ORDER BY a.hora_inicio DESC`,
       [idUsuario]
     );
 

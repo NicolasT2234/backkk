@@ -7,9 +7,9 @@ const router = express.Router();
 // GET /dashboard/estadisticas (solo administradores)
 router.get('/estadisticas', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
-    // PQRs pendientes
+    // PQRs pendientes - using queja_sugerencia as per DDL
     const [pqrsPendientes] = await pool.query(
-      'SELECT COUNT(*) as total FROM pqr WHERE estado = ?',
+      'SELECT COUNT(*) as total FROM queja_sugerencia WHERE estado = ?',
       ['Pendiente']
     );
 
@@ -25,7 +25,7 @@ router.get('/estadisticas', verificarToken, verificarRol('Administrador'), async
       ['Activo', 'Reservado']
     );
 
-    // Total de propietarios
+    // Total de proprietarios
     const [propietarios] = await pool.query(
       'SELECT COUNT(*) as total FROM propietario'
     );
@@ -64,37 +64,46 @@ router.get('/residente', verificarToken, async (req, res) => {
 
     // Multas pendientes del propietario
     const [multas] = await pool.query(
-      `SELECT m.id, m.descripcion, m.monto, m.fecha_vencimiento, m.estado,
-              a.bloque, a.numero, i.descripcion as interior
+      `SELECT m.id, m.descripcion, m.fecha_vencimiento, m.fecha_pago, m.estado,
+              b.nombre as bloque, a.numero, i.descripcion as interior,
+              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+              tm.valor as monto
        FROM multa m
        JOIN apartamento a ON m.id_apartamento = a.id
-       JOIN bloque b ON a.id_bloque = b.id
        JOIN interior i ON a.id_interior = i.id
+       JOIN bloque b ON a.id_bloque = b.id
+       JOIN propietario p ON a.id = p.id_apartamento
+       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
        WHERE a.id IN (
          SELECT ap.id FROM apartamento ap
          JOIN propietario pt ON ap.id = pt.id_apartamento
-         WHERE pt.id_user_data = ?
-       ) AND m.estado = ?`,
+         JOIN user_data ud ON pt.id_user_data = ud.id_usuario
+         WHERE ud.id_usuario = ?
+       )
+       AND m.estado = ?`,
       [idUsuario, 'Pendiente']
     );
 
     // Próximas reservas de alquiler
     const [alquileres] = await pool.query(
-      `SELECT a.id, a.fecha_inicio, a.fecha_fin, a.monto_total, a.estado,
-              ap.bloque, ap.numero, i.descripcion as interior
+      `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado,
+              b.nombre as bloque, a.numero, i.descripcion as interior,
+              -- Calculate monto_total as duration in hours * valor_hora
+              TIMESTAMPDIFF(HOUR, a.hora_inicio, a.hora_fin) * a.valor_hora as monto_total
        FROM alquiler a
        JOIN apartamento ap ON a.id_apartamento = ap.id
        JOIN bloque b ON ap.id_bloque = b.id
        JOIN interior i ON ap.id_interior = i.id
        WHERE a.id_propietario = ? AND a.estado IN (?, ?)
-       ORDER BY a.fecha_inicio ASC
+       ORDER BY a.hora_inicio ASC
        LIMIT 5`,
       [idPropietario, 'Activo', 'Reservado']
     );
 
     // Últimas 3 noticias
     const [noticias] = await pool.query(
-      `SELECT id, titulo, contenido, fecha_publicacion
+      `SELECT id, descripcion as titulo, descripcion as contenido, fecha_publicacion
        FROM noticia
        ORDER BY fecha_publicacion DESC
        LIMIT 3`
@@ -106,16 +115,20 @@ router.get('/residente', verificarToken, async (req, res) => {
         multas: multas.map(m => ({
           id: m.id,
           descripcion: m.descripcion,
-          monto: m.monto,
           fechaVencimiento: m.fecha_vencimiento,
+          fechaPago: m.fecha_pago,
           estado: m.estado,
-          apartamento: `${m.bloque}-${m.numero}${m.interior ? '-' + m.interior : ''}`
+          monto: m.monto,
+          apartamento: `${m.bloque}-${m.numero}${m.interior ? '-' + m.interior : ''}`,
+          nombrePropietario: m.nombre_propietario,
+          apellidoPropietario: m.apellido_propietario
         }))
       },
       proximasReservas: alquileres.map(a => ({
         id: a.id,
-        fechaInicio: a.fecha_inicio,
-        fechaFin: a.fecha_fin,
+        descripcion: a.descripcion,
+        fechaInicio: a.hora_inicio,
+        fechaFin: a.hora_fin,
         montoTotal: a.monto_total,
         estado: a.estado,
         apartamento: `${a.bloque}-${a.numero}${a.interior ? '-' + a.interior : ''}`
@@ -123,7 +136,7 @@ router.get('/residente', verificarToken, async (req, res) => {
       ultimasNoticias: noticias.map(n => ({
         id: n.id,
         titulo: n.titulo,
-        contenido: n.contenido.substring(0, 100) + '...',
+        contenido: n.contenido,
         fechaPublicacion: n.fecha_publicacion
       }))
     });

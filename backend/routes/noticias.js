@@ -4,13 +4,21 @@ const { verificarToken, verificarRol } = require('../auth');
 
 const router = express.Router();
 
+// Helper: map descripcion to titulo and contenido for frontend compatibility
+const mapNoticia = (row) => ({
+  id: row.id,
+  titulo: row.descripcion, // frontend expects titulo
+  contenido: row.descripcion, // frontend expects contenido
+  fecha_publicacion: row.fecha_publicacion
+});
+
 // GET /noticias (solo administradores para escritura, lectura pública para destacados)
 router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
     const [noticias] = await pool.query(
-      'SELECT id, titulo, contenido, fecha_publicacion FROM noticia ORDER BY fecha_publicacion DESC'
+      'SELECT id, descripcion, fecha_publicacion FROM noticia ORDER BY fecha_publicacion DESC'
     );
-    res.json(noticias);
+    res.json(noticias.map(mapNoticia));
   } catch (error) {
     console.error('Error al obtener noticias:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -22,7 +30,7 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   try {
     const { id } = req.params;
     const [noticias] = await pool.query(
-      'SELECT id, titulo, contenido, fecha_publicacion FROM noticia WHERE id = ?',
+      'SELECT id, descripcion, fecha_publicacion FROM noticia WHERE id = ?',
       [id]
     );
 
@@ -30,7 +38,7 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
       return res.status(404).json({ error: 'Noticia no encontrada' });
     }
 
-    res.json(noticias[0]);
+    res.json(mapNoticia(noticias[0]));
   } catch (error) {
     console.error('Error al obtener noticia:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -39,16 +47,16 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
 
 // POST /noticias (solo administradores)
 router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { titulo, contenido } = req.body;
+  const { descripcion } = req.body;
 
-  if (!titulo || !contenido) {
-    return res.status(400).json({ error: 'Título y contenido requeridos' });
+  if (!descripcion) {
+    return res.status(400).json({ error: 'Descripción requerida' });
   }
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO noticia (titulo, contenido, fecha_publicacion) VALUES (?, ?, NOW())',
-      [titulo, contenido]
+      'INSERT INTO noticia (descripcion, fecha_publicacion) VALUES (?, NOW())',
+      [descripcion]
     );
     res.status(201).json({ message: 'Noticia creada exitosamente', id: result.insertId });
   } catch (error) {
@@ -59,38 +67,20 @@ router.post('/', verificarToken, verificarRol('Administrador'), async (req, res)
 
 // PUT /noticias/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { titulo, contenido } = req.body;
+  const { descripcion } = req.body;
   const { id } = req.params;
 
-  if (!titulo && !contenido) {
-    return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
+  if (!descripcion) {
+    return res.status(400).json({ error: 'Descripción requerida' });
   }
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
-    const updates = [];
-    const values = [];
-
-    if (titulo !== undefined) {
-      updates.push('titulo = ?');
-      values.push(titulo);
-    }
-    if (contenido !== undefined) {
-      updates.push('contenido = ?');
-      values.push(contenido);
-    }
-
-    if (updates.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({ error: 'No hay campos para actualizar' });
-    }
-
-    values.push(id);
     await connection.query(
-      `UPDATE noticia SET ${updates.join(', ')} WHERE id = ?`,
-      values
+      'UPDATE noticia SET descripcion = ?, fecha_publicacion = NOW() WHERE id = ?',
+      [descripcion, id]
     );
 
     await connection.commit();
@@ -120,9 +110,9 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
 router.get('/destacadas', async (req, res) => {
   try {
     const [noticias] = await pool.query(
-      'SELECT id, titulo, contenido, fecha_publicacion FROM noticia ORDER BY fecha_publicacion DESC LIMIT 3'
+      'SELECT id, descripcion, fecha_publicacion FROM noticia ORDER BY fecha_publicacion DESC LIMIT 3'
     );
-    res.json(noticias);
+    res.json(noticias.map(mapNoticia));
   } catch (error) {
     console.error('Error al obtener noticias destacadas:', error);
     res.status(500).json({ error: 'Error interno del servidor' });

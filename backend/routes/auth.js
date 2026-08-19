@@ -15,12 +15,12 @@ router.post('/login', async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido
-       FROM usuario u
-       JOIN rol_usuario ru ON u.id = ru.id_usuario
-       JOIN rol r ON ru.id_rol = r.id
-       LEFT JOIN user_data ud ON u.id = ud.id_usuario
-       WHERE u.email = ? AND u.contraseña = SHA2(?, 256)`,
+      `SELECT u.id, u.email, r.nombre as rol, ud.primer_nombre as nombre, ud.primer_apellido as apellido
+      FROM usuario u
+      JOIN rol_usuario ru ON u.id = ru.id_user
+      JOIN rol r ON ru.id_rol = r.id
+      LEFT JOIN user_data ud ON u.id = ud.id_usuario
+      WHERE u.email = ? AND u.contraseña = SHA2(?, 256)`,
       [email, contraseña]
     );
 
@@ -59,11 +59,13 @@ router.post('/registro', async (req, res) => {
     nombre,
     apellido,
     telefono,
-    direccion
+    direccion,
+    tipoDocumento,
+    numeroDocumento
   } = req.body;
 
-  if (!email || !contraseña || !nombre || !apellido) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  if (!email || !contraseña || !nombre || !apellido || !tipoDocumento || !numeroDocumento) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: email, contraseña, nombre, apellido, tipoDocumento, numeroDocumento' });
   }
 
   const connection = await pool.getConnection();
@@ -77,10 +79,20 @@ router.post('/registro', async (req, res) => {
     );
     const idUsuario = usuarioResult.insertId;
 
+    // Obtener id_tipo_documento desde tabla tipo_documento usando nombre_documento
+    const [tipoResult] = await connection.query(
+      'SELECT id FROM tipo_documento WHERE nombre_documento = ?',
+      [tipoDocumento]
+    );
+    if (tipoResult.length === 0) {
+      throw new Error('Tipo de documento no encontrado');
+    }
+    const idTipoDocumento = tipoResult[0].id;
+
     // Insertar user_data
     await connection.query(
-      'INSERT INTO user_data (id_usuario, nombre, apellido, telefono, direccion) VALUES (?, ?, ?, ?, ?)',
-      [idUsuario, nombre, apellido, telefono || null, direccion || null]
+      'INSERT INTO user_data (id_usuario, numero_documento, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, id_tipo_documento) VALUES (?, ?, ?, NULL, ?, NULL, ?)',
+      [idUsuario, numeroDocumento, nombre, apellido, idTipoDocumento]
     );
 
     // Obtener rol de Propietario
@@ -95,7 +107,7 @@ router.post('/registro', async (req, res) => {
 
     // Asignar rol al usuario
     await connection.query(
-      'INSERT INTO rol_usuario (id_usuario, id_rol) VALUES (?, ?)',
+      'INSERT INTO rol_usuario (id_user, id_rol) VALUES (?, ?)',
       [idUsuario, rolResult[0].id]
     );
 

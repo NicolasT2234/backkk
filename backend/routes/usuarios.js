@@ -8,11 +8,17 @@ const router = express.Router();
 router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
     const [usuarios] = await pool.query(
-      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido, ud.telefono, ud.direccion
+      `SELECT u.id, u.email, r.nombre as rol,
+              ud.primer_nombre as nombres,
+              ud.primer_apellido as apellidos,
+              ud.numero_documento as numeroDocumento,
+              td.sigla as tipoDocumento,
+              '' as celular
        FROM usuario u
-       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol_usuario ru ON u.id = ru.id_user
        JOIN rol r ON ru.id_rol = r.id
        LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
        ORDER BY u.id`
     );
     res.json(usuarios);
@@ -27,11 +33,17 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   try {
     const { id } = req.params;
     const [usuarios] = await pool.query(
-      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido, ud.telefono, ud.direccion
+      `SELECT u.id, u.email, r.nombre as rol,
+              ud.primer_nombre as nombres,
+              ud.primer_apellido as apellidos,
+              ud.numero_documento as numeroDocumento,
+              td.sigla as tipoDocumento,
+              '' as celular
        FROM usuario u
-       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol_usuario ru ON u.id = ru.id_user
        JOIN rol r ON ru.id_rol = r.id
        LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
        WHERE u.id = ?`,
       [id]
     );
@@ -47,26 +59,59 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   }
 });
 
-// PUT /usuarios/:id (solo administradores)
+// PUT /usuarios/:id (solo administrar)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
-    const { email, nombre, apellido, telefono, direccion } = req.body;
+    const { email, nombre, apellido, tipoDocumento, numeroDocumento } = req.body;
 
     await connection.beginTransaction();
 
     // Actualizar usuario
-    await connection.query(
-      'UPDATE usuario SET email = ? WHERE id = ?',
-      [email, id]
-    );
+    if (email !== undefined) {
+      await connection.query(
+        'UPDATE usuario SET email = ? WHERE id = ?',
+        [email, id]
+      );
+    }
 
     // Actualizar user_data
-    await connection.query(
-      'UPDATE user_data SET nombre = ?, apellido = ?, telefono = ?, direccion = ? WHERE id_usuario = ?',
-      [nombre, apellido, telefono || null, direccion || null, id]
-    );
+    const updates = [];
+    const values = [];
+
+    if (nombre !== undefined) {
+      updates.push('primer_nombre = ?');
+      values.push(nombre);
+    }
+    if (apellido !== undefined) {
+      updates.push('primer_apellido = ?');
+      values.push(apellido);
+    }
+    if (numeroDocumento !== undefined) {
+      updates.push('numero_documento = ?');
+      values.push(numeroDocumento);
+    }
+    if (tipoDocumento !== undefined) {
+      // Obtener id_tipo_documento desde nombre_documento
+      const [tipoResult] = await connection.query(
+        'SELECT id FROM tipo_documento WHERE nombre_documento = ?',
+        [tipoDocumento]
+      );
+      if (tipoResult.length === 0) {
+        throw new Error('Tipo de documento no encontrado');
+      }
+      values.push(tipoResult[0].id);
+      updates.push('id_tipo_documento = ?');
+    }
+
+    if (updates.length > 0) {
+      values.push(id); // for WHERE id_usuario = ?
+      await connection.query(
+        `UPDATE user_data SET ${updates.join(', ')} WHERE id_usuario = ?`,
+        values
+      );
+    }
 
     await connection.commit();
     res.json({ message: 'Usuario actualizado exitosamente' });
@@ -90,7 +135,7 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
     // Eliminar en orden debido a claves foráneas
     await connection.query('DELETE FROM propietario WHERE id_user_data = ?', [id]);
     await connection.query('DELETE FROM user_data WHERE id_usuario = ?', [id]);
-    await connection.query('DELETE FROM rol_usuario WHERE id_usuario = ?', [id]);
+    await connection.query('DELETE FROM rol_usuario WHERE id_user = ?', [id]);
     await connection.query('DELETE FROM usuario WHERE id = ?', [id]);
 
     await connection.commit();
@@ -108,11 +153,17 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
 router.get('/me', verificarToken, async (req, res) => {
   try {
     const [usuarios] = await pool.query(
-      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido, ud.telefono, ud.direccion
+      `SELECT u.id, u.email, r.nombre as rol,
+              ud.primer_nombre as nombres,
+              ud.primer_apellido as apellidos,
+              ud.numero_documento as numeroDocumento,
+              td.sigla as tipoDocumento,
+              '' as celular
        FROM usuario u
-       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol_usuario ru ON u.id = ru.id_user
        JOIN rol r ON ru.id_rol = r.id
        LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
        WHERE u.id = ?`,
       [req.usuario.id]
     );
