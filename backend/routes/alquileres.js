@@ -55,23 +55,60 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   }
 });
 
-// POST /alquileres (solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { idApartamento, idPropietario, fechaInicio, fechaFin, montoTotal } = req.body;
+// POST /alquileres (cualquier usuario autenticado puede crear su propia reserva)
+router.post('/', verificarToken, async (req, res) => {
+  const { idApartamento, fechaInicio, fechaFin, montoTotal } = req.body;
 
-  if (!idApartamento || !idPropietario || !fechaInicio || !fechaFin || !montoTotal) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  if (!idApartamento || !fechaInicio || !fechaFin || !montoTotal) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: idApartamento, fechaInicio, fechaFin, montoTotal' });
   }
 
+  const idUsuario = req.usuario.id;
+  const connection = await pool.getConnection();
   try {
-    const [result] = await pool.query(
+    await connection.beginTransaction();
+
+    // Verificar que el usuario autenticado es propietario del apartamento
+    const [propietario] = await connection.query(
+      'SELECT id FROM propietario WHERE id_user_data = (SELECT id FROM user_data WHERE id_usuario = ?) AND id_apartamento = ?',
+      [idUsuario, idApartamento]
+    );
+
+    if (propietario.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ error: 'No tienes permiso para crear una reserva para este apartamento' });
+    }
+
+    const idPropietario = propietario[0].id;
+
+    // Validar disponibilidad: no overlap con otras reservas activas para el mismo apartamento
+    const [overlap] = await connection.query(
+      `SELECT COUNT(*) as count FROM alquiler
+       WHERE id_apartamento = ?
+         AND estado IN ('Activo', 'Reservado')
+         AND NOT (fecha_fin <= ? OR fecha_inicio >= ?)`,
+      [idApartamento, fechaInicio, fechaFin]
+    );
+
+    if (overlap[0].count > 0) {
+      await connection.rollback();
+      return res.status(409).json({ error: 'El apartamento ya está reservado para las fechas solicitadas' });
+    }
+
+    // Insertar alquiler
+    const [result] = await connection.query(
       'INSERT INTO alquiler (id_apartamento, id_propietario, fecha_inicio, fecha_fin, monto_total, estado) VALUES (?, ?, ?, ?, ?, ?)',
       [idApartamento, idPropietario, fechaInicio, fechaFin, montoTotal, 'Reservado']
     );
+
+    await connection.commit();
     res.status(201).json({ message: 'Alquiler creado exitosamente', id: result.insertId });
   } catch (error) {
+    await connection.rollback();
     console.error('Error al crear alquiler:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    connection.release();
   }
 });
 

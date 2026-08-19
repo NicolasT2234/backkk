@@ -55,17 +55,29 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   }
 });
 
-// POST /pqrs (solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { descripcion, tipo, idUsuario, idApartamento } = req.body;
+// POST /pqrs (cualquier usuario autenticado puede crear su propia PQR)
+router.post('/', verificarToken, async (req, res) => {
+  const { descripcion, tipo, idApartamento } = req.body;
 
-  if (!descripcion || !tipo || !idUsuario || !idApartamento) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  if (!descripcion || !tipo || !idApartamento) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: descripcion, tipo, idApartamento' });
   }
 
+  const idUsuario = req.usuario.id;
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+
+    // Verificar que el usuario autenticado es propietario del apartamento
+    const [propietario] = await connection.query(
+      'SELECT id FROM propietario WHERE id_user_data = (SELECT id FROM user_data WHERE id_usuario = ?) AND id_apartamento = ?',
+      [idUsuario, idApartamento]
+    );
+
+    if (propietario.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ error: 'No tienes permiso para crear una PQR para este apartamento' });
+    }
 
     // Insertar PQR
     const [pqrResult] = await connection.query(

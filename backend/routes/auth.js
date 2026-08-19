@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
