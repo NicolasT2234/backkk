@@ -63,38 +63,31 @@ function ResidenteDashboard() {
     if (user && user.id) {
       const userId = user.id
 
-      // Fetch pending multas count
-      api.get(`/multas?usuario_id=${userId}&estado=pendiente`)
+      // Fetch multas count (then filter locally)
+      api.get(`/multas/mis-multas`)
         .then(res => {
-          setPendingMultas(Array.isArray(res.data) ? res.data.length : 0)
+          const multas = Array.isArray(res.data) ? res.data : []
+          setPendingMultas(multas.filter(m => m.estado === 'pendiente').length)
+          setPaidMultas(multas.filter(m => m.estado === 'pagado').length)
         })
         .catch(err => {
-          console.error("Error fetching pending multas:", err)
+          console.error("Error fetching multas:", err)
           // Don't set error here to avoid breaking dashboard if one endpoint fails
         })
 
-      // Fetch paid multas count
-      api.get(`/multas?usuario_id=${userId}&estado=pagado`)
-        .then(res => {
-          setPaidMultas(Array.isArray(res.data) ? res.data.length : 0)
-        })
-        .catch(err => {
-          console.error("Error fetching paid multas:", err)
-        })
-
       // Fetch upcoming reservations (sorted by start date ascending)
-      api.get(`/reservas?usuario_id=${userId}&_sort=fecha_inicio&_order=ASC`)
+      api.get(`/alquileres/mis-alquileres?_sort=fecha_inicio&_order=ASC`)
         .then(res => {
           const reservas = Array.isArray(res.data) ? res.data : []
           // Show upcoming reservations (future dates) - but for simplicity, we'll show first 5
           setUpcomingReservas(reservas.slice(0, 5))
         })
         .catch(err => {
-          console.error("Error fetching reservas:", err)
+          console.error("Error fetching alquileres:", err)
         })
 
-      // Fetch latest news (sorted by publication date descending, limit 3)
-      api.get(`/noticias?_sort=fecha_publicacion&_order=DESC&_limit=3`)
+      // Fetch latest featured news (public endpoint)
+      api.get(`/noticias/destacadas`)
         .then(res => {
           setLatestNoticias(Array.isArray(res.data) ? res.data : [])
         })

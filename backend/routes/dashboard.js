@@ -1,141 +1,135 @@
 const express = require('express');
-const router = express.Router();
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
 
-// Dashboard routes - protected with token verification
+const router = express.Router();
 
-// GET administrator statistics
-router.get('/admin/stats', verificarToken, verificarRol(['Administrador']), async (req, res) => {
+// GET /dashboard/estadisticas (solo administradores)
+router.get('/estadisticas', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
-    // Get counts for various entities
-    const [usuariosCount] = await pool.query('SELECT COUNT(*) as total FROM usuarios');
-    const [propietariosCount] = await pool.query('SELECT COUNT(*) as total FROM propietario');
-    const [apartamentosCount] = await pool.query('SELECT COUNT(*) as total FROM apartamento');
-    const [multasCount] = await pool.query('SELECT COUNT(*) as total FROM multa');
-    const [alquileresCount] = await pool.query('SELECT COUNT(*) as total FROM alquiler');
-    const [pqrsCount] = await pool.query('SELECT COUNT(*) as total FROM queja_sugerencia');
+    // PQRs pendientes
+    const [pqrsPendientes] = await pool.query(
+      'SELECT COUNT(*) as total FROM pqr WHERE estado = ?',
+      ['Pendiente']
+    );
+
+    // Multas pendientes
+    const [multasPendientes] = await pool.query(
+      'SELECT COUNT(*) as total FROM multa WHERE estado = ?',
+      ['Pendiente']
+    );
+
+    // Alquileres activos/reservados
+    const [alquileres] = await pool.query(
+      'SELECT COUNT(*) as total FROM alquiler WHERE estado IN (?, ?)',
+      ['Activo', 'Reservado']
+    );
+
+    // Total de propietarios
+    const [propietarios] = await pool.query(
+      'SELECT COUNT(*) as total FROM propietario'
+    );
 
     res.json({
-      usuarios: usuariosCount[0].total,
-      propietarios: propietariosCount[0].total,
-      apartamentos: apartamentosCount[0].total,
-      multas: multasCount[0].total,
-      alquileres: alquileresCount[0].total,
-      pqrs: pqrsCount[0].total
+      pqrsPendientes: pqrsPendientes[0].total,
+      multasPendientes: multasPendientes[0].total,
+      alquileresActivos: alquileres[0].total,
+      totalPropietarios: propietarios[0].total
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener estadísticas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// GET resident dashboard data
-router.get('/resident/dashboard', verificarToken, async (req, res) => {
+// GET /dashboard/residente
+router.get('/residente', verificarToken, async (req, res) => {
   try {
-    // Assuming we have the user ID from the token
-    const userId = req.user.id;
+    const idUsuario = req.usuario.id;
 
-    // Get user's apartments
-    const [apartamentos] = await pool.query(`
-      SELECT a.* FROM apartamento a
-      JOIN propietario_gestion_apartamento pga ON a.id = pga.id_apartamento
-      WHERE pga.id_propietario = ?
-    `, [userId]);
+    // Obtener id_propietario del usuario
+    const [propietarioResult] = await pool.query(
+      `SELECT p.id as id_propietario
+       FROM propietario p
+       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       WHERE ud.id_usuario = ?`,
+      [idUsuario]
+    );
 
-    // Get user's pending PQRS
-    const [pqrsPendientes] = await pool.query(`
-      SELECT qs.* FROM queja_sugerencia qs
-      JOIN pqr_especifica pe ON qs.id = pe.id_queja_sugerencia
-      JOIN propietario_gestion_apartamento pga ON pe.id_apartamento = pga.id_apartamento
-      WHERE pga.id_propietario = ? AND qs.estado = 'Pendiente'
-    `, [userId]);
+    if (propietarioResult.length === 0) {
+      return res.status(404).json({ error: 'Propietario no encontrado' });
+    }
 
-    // Get user's active multas
-    const [multasActivas] = await pool.query(`
-      SELECT m.* FROM multa m
-      JOIN propietario_gestion_apartamento pga ON m.id_apartamento = pga.id_apartamento
-      WHERE pga.id_propietario = ? AND m.estado = 'Activo'
-    `, [userId]);
+    const idPropietario = propietarioResult[0].id_propietario;
 
-    // Get user's active alquileres
-    const [alquileresActivos] = await pool.query(`
-      SELECT a.* FROM alquiler a
-      JOIN propietario_gestion_apartamento pga ON a.id_propietario = pga.id_propietario
-      WHERE pga.id_propietario = ? AND a.estado = 'Activo'
-    `, [userId]);
+    // Multas pendientes del propietario
+    const [multas] = await pool.query(
+      `SELECT m.id, m.descripcion, m.monto, m.fecha_vencimiento, m.estado,
+              a.bloque, a.numero, i.descripcion as interior
+       FROM multa m
+       JOIN apartamento a ON m.id_apartamento = a.id
+       JOIN bloque b ON a.id_bloque = b.id
+       JOIN interior i ON a.id_interior = i.id
+       WHERE a.id IN (
+         SELECT ap.id FROM apartamento ap
+         JOIN propietario pt ON ap.id = pt.id_apartamento
+         WHERE pt.id_user_data = ?
+       ) AND m.estado = ?`,
+      [idUsuario, 'Pendiente']
+    );
+
+    // Próximas reservas de alquiler
+    const [alquileres] = await pool.query(
+      `SELECT a.id, a.fecha_inicio, a.fecha_fin, a.monto_total, a.estado,
+              ap.bloque, ap.numero, i.descripcion as interior
+       FROM alquiler a
+       JOIN apartamento ap ON a.id_apartamento = ap.id
+       JOIN bloque b ON ap.id_bloque = b.id
+       JOIN interior i ON ap.id_interior = i.id
+       WHERE a.id_propietario = ? AND a.estado IN (?, ?)
+       ORDER BY a.fecha_inicio ASC
+       LIMIT 5`,
+      [idPropietario, 'Activo', 'Reservado']
+    );
+
+    // Últimas 3 noticias
+    const [noticias] = await pool.query(
+      `SELECT id, titulo, contenido, fecha_publicacion
+       FROM noticia
+       ORDER BY fecha_publicacion DESC
+       LIMIT 3`
+    );
 
     res.json({
-      apartamentos: apartamentos,
-      pqrsPendientes: pqrsPendientes,
-      multasActivas: multasActivas,
-      alquileresActivos: alquileresActivos
+      multasPendientes: {
+        count: multas.length,
+        multas: multas.map(m => ({
+          id: m.id,
+          descripcion: m.descripcion,
+          monto: m.monto,
+          fechaVencimiento: m.fecha_vencimiento,
+          estado: m.estado,
+          apartamento: `${m.bloque}-${m.numero}${m.interior ? '-' + m.interior : ''}`
+        }))
+      },
+      proximasReservas: alquileres.map(a => ({
+        id: a.id,
+        fechaInicio: a.fecha_inicio,
+        fechaFin: a.fecha_fin,
+        montoTotal: a.monto_total,
+        estado: a.estado,
+        apartamento: `${a.bloque}-${a.numero}${a.interior ? '-' + a.interior : ''}`
+      })),
+      ultimasNoticias: noticias.map(n => ({
+        id: n.id,
+        titulo: n.titulo,
+        contenido: n.contenido.substring(0, 100) + '...',
+        fechaPublicacion: n.fecha_publicacion
+      }))
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET mis-pqrs (user's PQRS)
-router.get('/mis-pqrs', verificarToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const [pqrs] = await pool.query(`
-      SELECT qs.*, pe.id_apartamento, a.numero as apartamento_numero
-      FROM queja_sugerencia qs
-      JOIN pqr_especifica pe ON qs.id = pe.id_queja_sugerencia
-      JOIN propietario_gestion_apartamento pga ON pe.id_apartamento = pga.id_apartamento
-      JOIN apartamento a ON pe.id_apartamento = a.id
-      WHERE pga.id_propietario = ?
-      ORDER BY qs.fecha_creacion DESC
-    `, [userId]);
-
-    res.json(pqrs);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET mis-multas (user's multas)
-router.get('/mis-multas', verificarToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const [multas] = await pool.query(`
-      SELECT m.*, a.numero as apartamento_numero, tm.nombre as tipo_multa
-      FROM multa m
-      JOIN propietario_gestion_apartamento pga ON m.id_apartamento = pga.id_apartamento
-      JOIN apartamento a ON pga.id_apartamento = a.id
-      JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
-      WHERE pga.id_propietario = ?
-      ORDER BY m.fecha_creacion DESC
-    `, [userId]);
-
-    res.json(multas);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET mis-alquileres (user's alquileres)
-router.get('/mis-alquileres', verificarToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const [alquileres] = await pool.query(`
-      SELECT a.*, sc.nombre as salon_comunal, p.nombre as propietario_nombre
-      FROM alquiler a
-      JOIN propietario_gestion_apartamento pga ON a.id_propietario = pga.id_propietario
-      JOIN apartamento ap ON pga.id_apartamento = ap.id
-      JOIN salon_comunal sc ON a.id_salon_comunal = sc.id
-      JOIN propietario p ON pga.id_propietario = p.id
-      WHERE pga.id_propietario = ?
-      ORDER BY a.fecha_creacion DESC
-    `, [userId]);
-
-    res.json(alquileres);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener datos del residente:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

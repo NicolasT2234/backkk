@@ -15,12 +15,12 @@ function Login() {
     e.preventDefault()
     setError("")
     try {
-      const res = await api.post("/login", { email: correo, password })
-      localStorage.setItem("token", res.data.accessToken)
+      const res = await api.post("/auth/login", { email: correo, contraseña: password })
+      localStorage.setItem("token", res.data.token)
       localStorage.setItem("user", JSON.stringify(res.data.user))
       // Determine redirect based on role
-      const userRole = res.data.user?.role?.toLowerCase() || ''
-      const isAdmin = userRole === 'admin' || userRole === 'administrador'
+      const userRole = res.data.user?.rol?.toLowerCase() || ''
+      const isAdmin = userRole === 'administrador'
       navigate(isAdmin ? "/dashboard" : "/residente-dashboard")
     } catch (err) {
       setError("Correo o contraseña incorrectos")
@@ -54,7 +54,7 @@ function Login() {
         </div>
 
         <div className="campo">
-          <h2>CONTRASE�ÑA</h2>
+          <h2>CONTRASE���ÑA</h2>
           <div className="input-wrapper">
             <input
               type="password"
@@ -72,7 +72,7 @@ function Login() {
 
         <div className="contenedor">
           <button type="submit" className="btn-success">
-            Iniciar Sesión
+            Iniciar Sesion
           </button>
         </div>
 

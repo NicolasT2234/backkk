@@ -59,7 +59,7 @@ function Alquiler() {
     }
 
     try {
-      const res = await api.post("/reservas", {
+      const res = await api.post("/alquileres", {
         nombreSolicitante: formData.nombreSolicitante,
         tipoAlquiler: formData.tipoAlquiler,
         cantidadSillas: formData.cantidadSillas,
@@ -86,9 +86,9 @@ function Alquiler() {
     try {
       let res
       if (searchId && searchId.trim() !== "") {
-        res = await api.get(`/reservas/${encodeURIComponent(searchId)}`)
+        res = await api.get(`/alquileres/${encodeURIComponent(searchId)}`)
       } else if (searchDate) {
-        res = await api.get(`/reservas`, { params: { date: searchDate } })
+        res = await api.get(`/alquileres`, { params: { date: searchDate } })
       } else {
         setError("Ingrese ID o fecha para buscar")
         setLoading(false)
@@ -129,7 +129,7 @@ function Alquiler() {
     }
 
     try {
-      const res = await api.put(`/reservas/${encodeURIComponent(updateId)}`, payload)
+      const res = await api.put(`/alquileres/${encodeURIComponent(updateId)}`, payload)
       const id = res.data && (res.data.id || res.data._id || res.data.idReserva)
       setUpdateSuccess(id ? `Reserva actualizada correctamente (ID: ${id})` : "Reserva actualizada correctamente")
       setUpdateId("")
@@ -162,7 +162,7 @@ function Alquiler() {
     setDeleteError("")
 
     try {
-      await api.delete(`/reservas/${encodeURIComponent(deleteId)}`)
+      await api.delete(`/alquileres/${encodeURIComponent(deleteId)}`)
       setDeleteSuccess("Reserva eliminada correctamente")
       setDeleteId("")
       setShowDeleteCard(false)

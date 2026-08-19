@@ -1,84 +1,131 @@
 const express = require('express');
-const router = express.Router();
 const pool = require('../db');
+const { verificarToken, verificarRol } = require('../auth');
 
-// GET all noticias
-router.get('/', async (req, res) => {
+const router = express.Router();
+
+// GET /noticias (solo administradores para escritura, lectura pública para destacados)
+router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM noticia');
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET noticia by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM noticia WHERE id = ?', [req.params.id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Noticia no encontrada' });
-    }
-
-    res.json(rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// CREATE noticia
-router.post('/', async (req, res) => {
-  try {
-    const { descripcion, estado, fecha_publicacion, id_administrador } = req.body;
-
-    const [result] = await pool.query(
-      'INSERT INTO noticia (descripcion, estado, fecha_publicacion, id_administrador) VALUES (?, ?, ?, ?)',
-      [descripcion, estado, fecha_publicacion, id_administrador]
+    const [noticias] = await pool.query(
+      'SELECT id, titulo, contenido, fecha_publicacion FROM noticia ORDER BY fecha_publicacion DESC'
     );
-
-    res.status(201).json({ id: result.insertId, descripcion, estado, fecha_publicacion, id_administrador });
+    res.json(noticias);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener noticias:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// UPDATE noticia
-router.put('/:id', async (req, res) => {
+// GET /noticias/:id (solo administradores)
+router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { descripcion, estado, fecha_publicacion, id_administrador } = req.body;
-
-    const [result] = await pool.query(
-      'UPDATE noticia SET descripcion = ?, estado = ?, fecha_publicacion = ?, id_administrador = ? WHERE id = ?',
-      [descripcion, estado, fecha_publicacion, id_administrador, id]
+    const [noticias] = await pool.query(
+      'SELECT id, titulo, contenido, fecha_publicacion FROM noticia WHERE id = ?',
+      [id]
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Noticia no encontrada' });
+    if (noticias.length === 0) {
+      return res.status(404).json({ error: 'Noticia no encontrada' });
     }
 
-    res.json({ message: 'Noticia actualizada exitosamente' });
+    res.json(noticias[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener noticia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// DELETE noticia
-router.delete('/:id', async (req, res) => {
+// POST /noticias (solo administradores)
+router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
+  const { titulo, contenido } = req.body;
+
+  if (!titulo || !contenido) {
+    return res.status(400).json({ error: 'Título y contenido requeridos' });
+  }
+
   try {
     const [result] = await pool.query(
-      'DELETE FROM noticia WHERE id = ?',
-      [req.params.id]
+      'INSERT INTO noticia (titulo, contenido, fecha_publicacion) VALUES (?, ?, NOW())',
+      [titulo, contenido]
     );
+    res.status(201).json({ message: 'Noticia creada exitosamente', id: result.insertId });
+  } catch (error) {
+    console.error('Error al crear noticia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Noticia no encontrada' });
+// PUT /noticias/:id (solo administradores)
+router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+  const { titulo, contenido } = req.body;
+  const { id } = req.params;
+
+  if (!titulo && !contenido) {
+    return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const updates = [];
+    const values = [];
+
+    if (titulo !== undefined) {
+      updates.push('titulo = ?');
+      values.push(titulo);
+    }
+    if (contenido !== undefined) {
+      updates.push('contenido = ?');
+      values.push(contenido);
     }
 
+    if (updates.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ error: 'No hay campos para actualizar' });
+    }
+
+    values.push(id);
+    await connection.query(
+      `UPDATE noticia SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    await connection.commit();
+    res.json({ message: 'Noticia actualizada exitosamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al actualizar noticia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    connection.release();
+  }
+});
+
+// DELETE /noticias/:id (solo administradores)
+router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM noticia WHERE id = ?', [id]);
     res.json({ message: 'Noticia eliminada exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al eliminar noticia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /noticias/destacadas (público, sin autenticación)
+router.get('/destacadas', async (req, res) => {
+  try {
+    const [noticias] = await pool.query(
+      'SELECT id, titulo, contenido, fecha_publicacion FROM noticia ORDER BY fecha_publicacion DESC LIMIT 3'
+    );
+    res.json(noticias);
+  } catch (error) {
+    console.error('Error al obtener noticias destacadas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

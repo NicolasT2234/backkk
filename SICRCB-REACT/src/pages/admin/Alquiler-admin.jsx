@@ -43,7 +43,6 @@ export default function AlquilerAdmin() {
     const [tab, setTab] = useState("pendiente");
     const [procesando, setProcesando] = useState(null);
     const [busqueda, setBusqueda] = useState("");
-    const navigate = useNavigate();
 
     const handleLogout = () => navigate("/login");
 
@@ -58,23 +57,12 @@ export default function AlquilerAdmin() {
     useEffect(() => {
         const fetchSolicitudes = async () => {
             try {
-                const endpoints = ["/alquiler/solicitudes", "/reservas"];
-                for (const endpoint of endpoints) {
-                    try {
-                        const res = await api.get(endpoint);
-                        const data = normalizeSolicitudes(res.data);
-                        setSolicitudes(data);
-                        return;
-                    } catch (err) {
-                        if (err.response?.status === 404) continue;
-                        throw err;
-                    }
-                }
-                throw new Error("No se encontró un endpoint válido para solicitudes de alquiler.");
+                const res = await api.get("/alquileres");
+                setSolicitudes(normalizeSolicitudes(res.data));
+                setLoading(false);
             } catch (err) {
                 console.error("Error al cargar solicitudes:", err);
                 setError("No se pudieron cargar las solicitudes de alquiler.");
-            } finally {
                 setLoading(false);
             }
         };
@@ -84,19 +72,7 @@ export default function AlquilerAdmin() {
     const actualizarEstado = async (id, nuevoEstado) => {
         try {
             setProcesando(id);
-            const endpoints = ["/alquiler/solicitudes", "/reservas"];
-            let updated = false;
-            for (const base of endpoints) {
-                try {
-                    await api.patch(`${base}/${id}`, { estado: nuevoEstado });
-                    updated = true;
-                    break;
-                } catch (err) {
-                    if (err.response?.status === 404) continue;
-                    throw err;
-                }
-            }
-            if (!updated) throw new Error("No se encontró un endpoint válido para actualizar el estado.");
+            await api.put(`/alquileres/${id}`, { estado: nuevoEstado });
             setSolicitudes((prev) => prev.map((s) => (s.id === id ? { ...s, estado: nuevoEstado } : s)));
         } catch (err) {
             console.error("Error al actualizar solicitud:", err);

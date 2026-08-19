@@ -1,92 +1,131 @@
 const express = require('express');
-const router = express.Router();
 const pool = require('../db');
+const { verificarToken, verificarRol } = require('../auth');
 
-// GET all usuarios
-router.get('/', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT id, email, estado, image_url FROM usuario');
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+const router = express.Router();
 
-// GET usuario by ID
-router.get('/:id', async (req, res) => {
+// GET /usuarios (solo administradores)
+router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT id, email, estado, image_url FROM usuario WHERE id = ?',
-      [req.params.id]
+    const [usuarios] = await pool.query(
+      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido, ud.telefono, ud.direccion
+       FROM usuario u
+       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol r ON ru.id_rol = r.id
+       LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       ORDER BY u.id`
     );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-
-    res.json(rows[0]);
+    res.json(usuarios);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// CREATE usuario
-router.post('/', async (req, res) => {
-  try {
-    const { email, contraseña, estado, image_url } = req.body;
-
-    const [result] = await pool.query(
-      'INSERT INTO usuario (email, contraseña, estado, image_url) VALUES (?, ?, ?, ?)',
-      [email, contraseña, estado, image_url]
-    );
-
-    res.status(201).json({
-      id: result.insertId,
-      email,
-      estado,
-      image_url
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// UPDATE usuario
-router.put('/:id', async (req, res) => {
+// GET /usuarios/:id (solo administradores)
+router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, contraseña, estado, image_url } = req.body;
-
-    const [result] = await pool.query(
-      'UPDATE usuario SET email = ?, contraseña = ?, estado = ?, image_url = ? WHERE id = ?',
-      [email, contraseña, estado, image_url, id]
+    const [usuarios] = await pool.query(
+      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido, ud.telefono, ud.direccion
+       FROM usuario u
+       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol r ON ru.id_rol = r.id
+       LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       WHERE u.id = ?`,
+      [id]
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+    if (usuarios.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json({ message: 'Usuario actualizado exitosamente' });
+    res.json(usuarios[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// DELETE usuario
-router.delete('/:id', async (req, res) => {
+// PUT /usuarios/:id (solo administradores)
+router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const [result] = await pool.query(
-      'DELETE FROM usuario WHERE id = ?',
-      [req.params.id]
+    const { id } = req.params;
+    const { email, nombre, apellido, telefono, direccion } = req.body;
+
+    await connection.beginTransaction();
+
+    // Actualizar usuario
+    await connection.query(
+      'UPDATE usuario SET email = ? WHERE id = ?',
+      [email, id]
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
+    // Actualizar user_data
+    await connection.query(
+      'UPDATE user_data SET nombre = ?, apellido = ?, telefono = ?, direccion = ? WHERE id_usuario = ?',
+      [nombre, apellido, telefono || null, direccion || null, id]
+    );
 
+    await connection.commit();
+    res.json({ message: 'Usuario actualizado exitosamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    connection.release();
+  }
+});
+
+// DELETE /usuarios/:id (solo administradores)
+router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { id } = req.params;
+
+    await connection.beginTransaction();
+
+    // Eliminar en orden debido a claves foráneas
+    await connection.query('DELETE FROM propietario WHERE id_user_data = ?', [id]);
+    await connection.query('DELETE FROM user_data WHERE id_usuario = ?', [id]);
+    await connection.query('DELETE FROM rol_usuario WHERE id_usuario = ?', [id]);
+    await connection.query('DELETE FROM usuario WHERE id = ?', [id]);
+
+    await connection.commit();
     res.json({ message: 'Usuario eliminado exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    await connection.rollback();
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    connection.release();
+  }
+});
+
+// GET /usuarios/me
+router.get('/me', verificarToken, async (req, res) => {
+  try {
+    const [usuarios] = await pool.query(
+      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido, ud.telefono, ud.direccion
+       FROM usuario u
+       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol r ON ru.id_rol = r.id
+       LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       WHERE u.id = ?`,
+      [req.usuario.id]
+    );
+
+    if (usuarios.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Excluir la contraseña (ya no se selecciona en la query)
+    res.json(usuarios[0]);
+  } catch (error) {
+    console.error('Error al obtener datos del usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

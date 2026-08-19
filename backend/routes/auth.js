@@ -1,107 +1,130 @@
 const express = require('express');
-const router = express.Router();
 const pool = require('../db');
-const { verificarToken } = require('../auth');
+const { verificarToken, verificarRol } = require('../auth');
 
-// POST login
+const router = express.Router();
+
+// POST /login
 router.post('/login', async (req, res) => {
+  const { email, contraseña } = req.body;
+
+  if (!email || !contraseña) {
+    return res.status(400).json({ error: 'Email y contraseña requeridos' });
+  }
+
   try {
-    const { email, password } = req.body;
-
-    // Basic validation
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email y contraseña son requeridos.' });
-    }
-
-    // Query user by email
     const [rows] = await pool.query(
-      'SELECT u.id, u.email, u.contraseña, u.estado, u.image_url, r.nombre as rol FROM usuarios u JOIN roles r ON u.id_rol = r.id WHERE u.email = ?',
-      [email]
+      `SELECT u.id, u.email, r.nombre as rol, ud.nombre, ud.apellido
+       FROM usuario u
+       JOIN rol_usuario ru ON u.id = ru.id_usuario
+       JOIN rol r ON ru.id_rol = r.id
+       LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       WHERE u.email = ? AND u.contraseña = SHA2(?, 256)`,
+      [email, contraseña]
     );
 
     if (rows.length === 0) {
-      return res.status(400).json({ error: 'Credenciales inválidas.' });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const user = rows[0];
-
-    // Verify password using SHA2 (matching database implementation)
-    const passwordHash = require('crypto').createHash('sha256').update(password).digest('hex');
-    if (user.contraseña !== passwordHash) {
-      return res.status(400).json({ error: 'Credenciales inválidas.' });
-    }
-
-    // Check if user is active
-    if (user.estado !== 1) {
-      return res.status(400).json({ error: 'Usuario inactivo.' });
-    }
-
-    // Generate JWT token
-    const token = require('jsonwebtoken').sign(
-      {
-        id: user.id,
-        email: user.email,
-        rol: user.rol,
-        image_url: user.image_url
-      },
+    const usuario = rows[0];
+    const token = jwt.sign(
+      { id: usuario.id, rol: usuario.rol },
       process.env.JWT_SECRET,
-      { expiresIn: '8h' }
+      { expiresIn: '24h' }
     );
 
-    // Return user info (without password) and token
     res.json({
       token,
       user: {
-        id: user.id,
-        email: user.email,
-        rol: user.rol,
-        image_url: user.image_url
+        id: usuario.id,
+        email: usuario.email,
+        rol: usuario.rol,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido
       }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error en login:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// POST registro
+// POST /registro
 router.post('/registro', async (req, res) => {
+  const {
+    email,
+    contraseña,
+    nombre,
+    apellido,
+    telefono,
+    direccion
+  } = req.body;
+
+  if (!email || !contraseña || !nombre || !apellido) {
+    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  }
+
+  const connection = await pool.getConnection();
   try {
-    const { email, password, nombre, apellido, telefono, direccion, id_rol, image_url } = req.body;
+    await connection.beginTransaction();
 
-    // Basic validation
-    if (!email || !password || !nombre || !apellido || !id_rol) {
-      return res.status(400).json({ error: 'Email, contraseña, nombre, apellido y rol son requeridos.' });
-    }
+    // Insertar usuario
+    const [usuarioResult] = await connection.query(
+      'INSERT INTO usuario (email, contraseña) VALUES (?, SHA2(?, 256))',
+      [email, contraseña]
+    );
+    const idUsuario = usuarioResult.insertId;
 
-    // Check if email already exists
-    const [emailExists] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
-    if (emailExists.length > 0) {
-      return res.status(400).json({ error: 'El email ya está registrado.' });
-    }
-
-    // Hash password with SHA2
-    const passwordHash = require('crypto').createHash('sha256').update(password).digest('hex');
-
-    // Insert new user
-    const [result] = await pool.query(
-      'INSERT INTO usuarios (email, contraseña, nombre, apellido, telefono, direccion, id_rol, image_url, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
-      [email, passwordHash, nombre, apellido, telefono || null, direccion || null, id_rol, image_url || null]
+    // Insertar user_data
+    await connection.query(
+      'INSERT INTO user_data (id_usuario, nombre, apellido, telefono, direccion) VALUES (?, ?, ?, ?, ?)',
+      [idUsuario, nombre, apellido, telefono || null, direccion || null]
     );
 
-    res.status(201).json({
-      message: 'Usuario registrado exitosamente.',
-      usuarioId: result.insertId
-    });
+    // Obtener rol de Propietario
+    const [rolResult] = await connection.query(
+      'SELECT id FROM rol WHERE nombre = ? LIMIT 1',
+      ['Propietario']
+    );
+
+    if (rolResult.length === 0) {
+      throw new Error('Rol Propietario no encontrado');
+    }
+
+    // Asignar rol al usuario
+    await connection.query(
+      'INSERT INTO rol_usuario (id_usuario, id_rol) VALUES (?, ?)',
+      [idUsuario, rolResult[0].id]
+    );
+
+    // Insertar propietario (asumiendo que hay apartamento disponible)
+    // Primero obtener un apartamento disponible (por simplicidad, el primero)
+    const [apartamento] = await connection.query(
+      'SELECT id FROM apartamento LIMIT 1'
+    );
+
+    if (apartamento.length > 0) {
+      await connection.query(
+        'INSERT INTO propietario (id_user_data, id_apartamento) VALUES (?, ?)',
+        [idUsuario, apartamento[0].id]
+      );
+    }
+
+    await connection.commit();
+    res.status(201).json({ message: 'Usuario registrado exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    await connection.rollback();
+    console.error('Error en registro:', error);
+    res.status(500).json({ error: 'Error al registrar usuario' });
+  } finally {
+    connection.release();
   }
 });
 
-// POST logout
-router.post('/logout', verificarToken, (req, res) => {
-  // In a more sophisticated implementation, you might add the token to a blacklist
-  // For now, we just return a success message since the client should discard the token
-  res.json({ message: 'Sesión cerrada exitosamente.' });
+// POST /logout
+router.post('/logout', (req, res) => {
+  res.json({ message: 'Sesión cerrada' });
 });
 
 module.exports = router;

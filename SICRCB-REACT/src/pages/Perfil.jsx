@@ -51,12 +51,6 @@ function Perfil() {
       return
     }
 
-    const userId = usuario?.id ?? usuario?.userId
-    if (!userId) {
-      alert("No se pudo identificar el usuario. Vuelva a iniciar sesión.")
-      return
-    }
-
     try {
       const payload = {
         nombres: formData.nombres,
@@ -67,7 +61,7 @@ function Perfil() {
         email: formData.email,
       }
 
-      const response = await api.put(`/users/${userId}`, payload)
+      const response = await api.put(`/usuarios/me`, payload)
       const updatedUser = { ...usuario, ...response.data }
       setUsuario(updatedUser)
       localStorage.setItem("user", JSON.stringify(updatedUser))

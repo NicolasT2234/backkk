@@ -13,7 +13,8 @@ function Registro() {
     apellidos: "",
     correo: "",
     password: "",
-    role: "user", 
+    role: "user",
+    celular: "",
   })
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -32,19 +33,17 @@ function Registro() {
     setSuccess("")
 
     try {
-      await api.post("/register", {
+      await api.post("/auth/registro", {
         email: formData.correo,
-        password: formData.password,
-        passwordConfirmation: formData.password,
-        tipoDocumento: formData.tipoDocumento,
-        numeroDocumento: formData.numeroDocumento,
-        nombres: formData.nombres,
-        apellidos: formData.apellidos,
-        celular: formData.celular,
+        contraseña: formData.password,
+        nombre: formData.nombres,
+        apellido: formData.apellidos,
+        telefono: formData.celular || null,
+        direccion: null,
       })
 
       setSuccess("Usuario registrado correctamente")
-  
+
       setFormData({
         ...formData,
         tipoDocumento: "",
@@ -53,6 +52,7 @@ function Registro() {
         apellidos: "",
         correo: "",
         password: "",
+        celular: "",
       })
 
       setTimeout(() => {
@@ -158,7 +158,7 @@ function Registro() {
         </div>
 
         <div className="campo">
-          <h2>CONTRASEÑA</h2>
+          <h2>CONTRASE�ÑA</h2>
           <div className="input-wrapper">
             <input
               type="password"
