@@ -6,7 +6,7 @@ import "../../assets/css/multa-residente.css";
 import api from "../../services/api";
 import Footer from "../../components/Footer";
 import NavbarApp from "../../components/NavbarApp";
-import { Badge, Spinner, Alert, Table, Tabs, Tab } from "react-bootstrap";
+import { Spinner, Alert, Badge } from "react-bootstrap";
 
 const ESTADOS = {
   pendiente: { label: "Pendiente", bg: "warning" },
@@ -17,14 +17,14 @@ const ESTADOS = {
 
 function EstadoBadge({ estado }) {
   const info = ESTADOS[estado] || { label: estado, bg: "dark" };
-  return <Badge bg={info.bg}>{info.label}</Badge>;
+  const className = `badge-${estado}`;
+  return <Badge className={className}>{info.label}</Badge>;
 }
 
 export default function MisMultas() {
   const [multas, setMultas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState("todas");
 
   const navigate = useNavigate();
 
@@ -48,91 +48,102 @@ export default function MisMultas() {
     fetchMultas();
   }, []);
 
-  const multasFiltradas = multas.filter((m) =>
-    tab === "todas" ? true : m.estado === tab
-  );
+  if (loading) {
+    return (
+      <div className="multas-page">
+        <NavbarApp onLogout={handleLogout} />
+        <div className="container py-4" style={{ flex: "1 0 auto" }}>
+          <h3
+            style={{ color: "rgb(140, 50, 0)" }}
+            className="mb-4 fw-bold"
+          >
+            Mis Multas
+          </h3>
+          <div className="text-center py-5">
+            <Spinner
+              animation="border"
+              style={{ color: "rgb(140, 50, 0)" }}
+            />
+          </div>
+        </div>
+        <Footer style={{ marginTop: "auto" }} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="multas-page">
+        <NavbarApp onLogout={handleLogout} />
+        <div className="container py-4" style={{ flex: "1 0 auto" }}>
+          <h3
+            style={{ color: "rgb(140, 50, 0)" }}
+            className="mb-4 fw-bold"
+          >
+            Mis Multas
+          </h3>
+          <div className="text-center py-5">
+            <Alert variant="danger">{error}</Alert>
+          </div>
+        </div>
+        <Footer style={{ marginTop: "auto" }} />
+      </div>
+    );
+  }
 
   return (
-  <div className="multas-page">
-    <NavbarApp onLogout={handleLogout} />
-
-    <div className="container py-4" style={{ flex: "1 0 auto" }}>
-      <h3
-        style={{ color: "rgb(140, 50, 0)" }}
-        className="mb-4 fw-bold"
-      >
-        Mis Multas
-      </h3>
-
-      <Tabs
-        activeKey={tab}
-        onSelect={(k) => setTab(k)}
-        className="mb-3 custom-tabs"
-      >
-        <Tab eventKey="todas" title="Todas" />
-        <Tab eventKey="pendiente" title="Pendientes" />
-        <Tab eventKey="pagada" title="Pagadas" />
-      </Tabs>
-
-      {loading && (
-        <div className="text-center py-5">
-          <Spinner
-            animation="border"
-            style={{ color: "rgb(140, 50, 0)" }}
-          />
-        </div>
-      )}
-
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      {!loading && !error && (
-        <div
-          className="table-responsive rounded"
-          style={{ border: "1px solid #FFD0A0" }}
+    <div className="multas-page">
+      <NavbarApp onLogout={handleLogout} />
+      <div className="container py-4" style={{ flex: "1 0 auto" }}>
+        <h3
+          style={{ color: "rgb(140, 50, 0)" }}
+          className="mb-4 fw-bold"
         >
-          <Table hover className="mb-0 align-middle">
-            <thead style={{ backgroundColor: "#FFD0A0" }}>
-              <tr>
-                <th>Fecha</th>
-                <th>Motivo</th>
-                <th>Monto</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
+          Mis Multas
+        </h3>
 
-            <tbody>
-              {multasFiltradas.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="text-center text-muted py-4"
-                  >
-                    No tienes multas registradas en esta categoría.
-                  </td>
-                </tr>
-              ) : (
-                multasFiltradas.map((m) => (
-                  <tr key={m.id}>
-                    <td>
-                      {new Date(m.fecha).toLocaleDateString("es-CO")}
-                    </td>
-                    <td>{m.motivo}</td>
-                    <td>
-                      ${Number(m.monto).toLocaleString("es-CO")}
-                    </td>
-                    <td>
-                      <EstadoBadge estado={m.estado} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
-        </div>
-      )}
+        {multas.length === 0 ? (
+          <div className="text-center py-5">
+            <p className="text-muted" style={{ fontSize: "1.1rem" }}>
+              No tienes multas pendientes
+            </p>
+          </div>
+        ) : (
+          <div className="row g-4">
+            {multas.map((m) => (
+              <div key={m.id} className="col-md-6 col-lg-4">
+                <div className="multa-card h-100">
+                  <div className="multa-card-header">
+                    <h5 className="multa-title mb-2">{m.nombre}</h5>
+                    <div className="multa-meta">
+                      <span className="multa-number">#{m.numero}</span>
+                      <span className="multa-estado">
+                        <EstadoBadge estado={m.estado} />
+                      </span>
+                    </div>
+                  </div>
+                  <div className="multa-card-body">
+                    <p className="multa-description">{m.descripcion}</p>
+                    <div className="multa-details">
+                      <div className="multa-detail-item">
+                        <span className="detail-label">Monto:</span>
+                        <span className="detail-value">${Number(m.monto).toLocaleString("es-CO")}</span>
+                      </div>
+                      <div className="multa-detail-item">
+                        <span className="detail-label">Estado:</span>
+                        <span className="detail-value">
+                          <EstadoBadge estado={m.estado} />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <Footer style={{ marginTop: "auto" }} />
     </div>
-
-    <Footer style={{ marginTop: "auto" }} />
-  </div>
-);
+  );
 }

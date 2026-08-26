@@ -1,3 +1,85 @@
-◇ injected env (6) from .env // tip: ⌘ override existing { override: true }
-DB_NAME cargado como: sicrcb
+◇ injected env (6) from .env // tip: ⌘ suppress logs { quiet: true }
+DB_NAME cargado como: sicrcb | DB_PASSWORD definido: true
 Servidor ejecutándose en puerto 5000
+[2026-08-26T04:53:11.779Z] POST /api/noticias
+[DEBUG] Noticias route: POST /
+[DEBUG] POST /noticias
+[2026-08-26T04:53:16.284Z] GET /api/noticias/6
+[DEBUG] Noticias route: GET /6
+[DEBUG] GET /noticias/6
+[2026-08-26T04:53:25.426Z] GET /api/noticias/destacadas
+[DEBUG] Noticias route: GET /destacadas
+[DEBUG] GET /noticias/destacadas - PUBLIC ENDPOINT
+[DEBUG] About to execute query for destacados
+[DEBUG] Query executed, found 3 noticias
+[DEBUG] First noticia: {
+  id: 6,
+  descripcion: 'Test noticia con archivo adjunto',
+  fecha_publicacion: 2026-08-26T15:00:00.000Z,
+  archivo_url: '/uploads/noticias/1787719991783-test-file.txt'
+}
+[2026-08-26T04:54:08.367Z] GET /uploads/noticias/1787719991783-test-file.txt
+[2026-08-26T04:55:00.102Z] POST /api/noticias
+[DEBUG] Noticias route: POST /
+[DEBUG] POST /noticias
+[2026-08-26T04:55:10.823Z] GET /api/noticias/7
+[DEBUG] Noticias route: GET /7
+[DEBUG] GET /noticias/7
+[2026-08-26T04:55:13.716Z] GET /uploads/noticias/1787720100103-test-image.svg
+[2026-08-26T04:55:17.025Z] GET /api/noticias/destacadas
+[DEBUG] Noticias route: GET /destacadas
+[DEBUG] GET /noticias/destacadas - PUBLIC ENDPOINT
+[DEBUG] About to execute query for destacados
+[DEBUG] Query executed, found 3 noticias
+[DEBUG] First noticia: {
+  id: 7,
+  descripcion: 'Noticia con imagen SVG',
+  fecha_publicacion: 2026-08-26T16:00:00.000Z,
+  archivo_url: '/uploads/noticias/1787720100103-test-image.svg'
+}
+[2026-08-26T04:56:14.402Z] PUT /api/noticias/7
+[DEBUG] Noticias route: PUT /7
+[DEBUG] PUT /noticias/7
+[2026-08-26T04:56:18.447Z] GET /api/noticias/7
+[DEBUG] Noticias route: GET /7
+[DEBUG] GET /noticias/7
+[2026-08-26T04:56:27.846Z] PUT /api/noticias/7
+[DEBUG] Noticias route: PUT /7
+[DEBUG] PUT /noticias/7
+[2026-08-26T04:56:31.967Z] GET /api/noticias/7
+[DEBUG] Noticias route: GET /7
+[DEBUG] GET /noticias/7
+[2026-08-26T04:56:39.254Z] DELETE /api/noticias/6
+[DEBUG] Noticias route: DELETE /6
+[DEBUG] DELETE /noticias/6
+[2026-08-26T04:58:12.818Z] POST /api/auth/login
+[2026-08-26T04:58:58.558Z] POST /api/noticias
+[DEBUG] Noticias route: POST /
+[DEBUG] POST /noticias
+[2026-08-26T04:59:01.826Z] GET /api/noticias/8
+[DEBUG] Noticias route: GET /8
+[DEBUG] GET /noticias/8
+[2026-08-26T04:59:03.663Z] GET /uploads/noticias/1787720338558-frontend-test.txt
+[2026-08-26T04:59:07.410Z] GET /api/noticias/destacadas
+[DEBUG] Noticias route: GET /destacadas
+[DEBUG] GET /noticias/destacadas - PUBLIC ENDPOINT
+[DEBUG] About to execute query for destacados
+[DEBUG] Query executed, found 3 noticias
+[DEBUG] First noticia: {
+  id: 8,
+  descripcion: 'Noticia subida desde frontend de prueba',
+  fecha_publicacion: 2026-08-27T14:00:00.000Z,
+  archivo_url: '/uploads/noticias/1787720338558-frontend-test.txt'
+}
+[2026-08-26T04:59:42.731Z] PUT /api/noticias/8
+[DEBUG] Noticias route: PUT /8
+[DEBUG] PUT /noticias/8
+[2026-08-26T04:59:47.109Z] GET /api/noticias/8
+[DEBUG] Noticias route: GET /8
+[DEBUG] GET /noticias/8
+[2026-08-26T04:59:53.977Z] PUT /api/noticias/8
+[DEBUG] Noticias route: PUT /8
+[DEBUG] PUT /noticias/8
+[2026-08-26T05:00:02.787Z] GET /api/noticias/8
+[DEBUG] Noticias route: GET /8
+[DEBUG] GET /noticias/8

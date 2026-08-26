@@ -54,7 +54,7 @@ function Login() {
         </div>
 
         <div className="campo">
-          <h2>CONTRASEÑA</h2>
+          <h2>CONTRASE���ÑA</h2>
           <div className="input-wrapper">
             <input
               type="password"

@@ -3,6 +3,7 @@ import "../../assets/css/dashboard.css"
 import NavbarApp from "../../components/NavbarApp.jsx"
 import { useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
+import api from "../../services/api"
 
 function parseJwt(token) {
   try {
@@ -22,6 +23,14 @@ function Dashboard() {
   const [userRole, setUserRole] = useState('')
   const [loading, setLoading] = useState(true)
 
+  // Dashboard statistics
+  const [stats, setStats] = useState({
+    alquileresActivos: 0,
+    multasPendientes: 0,
+    pqrsPendientes: 0,
+    totalPropietarios: 0
+  })
+
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) {
@@ -32,7 +41,34 @@ function Dashboard() {
         setUserRole(Array.isArray(role) ? (role[0] || '') : String(role))
       }
     }
-    setLoading(false)
+
+    // Fetch dashboard statistics
+    const fetchStats = async () => {
+      try {
+        const res = await api.get('/dashboard/estadisticas')
+        // Based on the summary, the response should contain:
+        // pqrsPendientes, multasPendientes, alquileresActivos, totalPropietarios
+        if (res.data) {
+          setStats({
+            alquileresActivos: res.data.alquileresActivos || 0,
+            multasPendientes: res.data.multasPendientes || 0,
+            pqrsPendientes: res.data.pqrsPendientes || 0,
+            totalPropietarios: res.data.totalPropietarios || 0
+          })
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err)
+        // Keep default values (0) if there's an error
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (token) {
+      fetchStats()
+    } else {
+      setLoading(false)
+    }
   }, [])
 
   if (loading) {
@@ -62,7 +98,7 @@ function Dashboard() {
           <hr />
           <div className="stat-card">
             <h3>Total</h3>
-            <p className="stat-number">24</p>
+            <p className="stat-number">{stats.alquileresActivos}</p>
           </div>
         </div>
 
@@ -72,7 +108,7 @@ function Dashboard() {
           <hr />
           <div className="stat-card">
             <h3>Total</h3>
-            <p className="stat-number">7</p>
+            <p className="stat-number">{stats.multasPendientes}</p>
           </div>
         </div>
 
@@ -82,7 +118,7 @@ function Dashboard() {
           <hr />
           <div className="stat-card">
             <h3>Total</h3>
-            <p className="stat-number">156</p>
+            <p className="stat-number">{stats.totalPropietarios}</p>
           </div>
         </div>
 
@@ -92,7 +128,7 @@ function Dashboard() {
           <hr />
           <div className="stat-card">
             <h3>Total</h3>
-            <p className="stat-number">5</p>
+            <p className="stat-number">{stats.pqrsPendientes}</p>
           </div>
         </div>
 

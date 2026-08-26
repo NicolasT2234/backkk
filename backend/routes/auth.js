@@ -59,7 +59,6 @@ router.post('/registro', async (req, res) => {
     nombre,
     apellido,
     telefono,
-    direccion,
     tipoDocumento,
     numeroDocumento
   } = req.body;
@@ -74,14 +73,14 @@ router.post('/registro', async (req, res) => {
 
     // Insertar usuario
     const [usuarioResult] = await connection.query(
-      'INSERT INTO usuario (email, contraseña) VALUES (?, SHA2(?, 256))',
-      [email, contraseña]
+      'INSERT INTO usuario (email, contraseña, estado) VALUES (?, SHA2(?, 256), ?)',
+      [email, contraseña, 'Activo']
     );
     const idUsuario = usuarioResult.insertId;
 
     // Obtener id_tipo_documento desde tabla tipo_documento usando nombre_documento
     const [tipoResult] = await connection.query(
-      'SELECT id FROM tipo_documento WHERE nombre_documento = ?',
+      'SELECT id FROM tipo_documento WHERE sigla = ?',
       [tipoDocumento]
     );
     if (tipoResult.length === 0) {
@@ -90,10 +89,11 @@ router.post('/registro', async (req, res) => {
     const idTipoDocumento = tipoResult[0].id;
 
     // Insertar user_data
-    await connection.query(
+    const [userDataResult] = await connection.query(
       'INSERT INTO user_data (id_usuario, numero_documento, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, id_tipo_documento) VALUES (?, ?, ?, NULL, ?, NULL, ?)',
       [idUsuario, numeroDocumento, nombre, apellido, idTipoDocumento]
     );
+    const idUserData = userDataResult.insertId;
 
     // Obtener rol de Propietario
     const [rolResult] = await connection.query(
@@ -111,18 +111,11 @@ router.post('/registro', async (req, res) => {
       [idUsuario, rolResult[0].id]
     );
 
-    // Insertar propietario (asumiendo que hay apartamento disponible)
-    // Primero obtener un apartamento disponible (por simplicidad, el primero)
-    const [apartamento] = await connection.query(
-      'SELECT id FROM apartamento LIMIT 1'
+    // Insertar propietario (sin apartamento: el admin lo asigna después)
+    await connection.query(
+      'INSERT INTO propietario (id_user_data, estado) VALUES (?, ?)',
+      [idUserData, 'Activo']
     );
-
-    if (apartamento.length > 0) {
-      await connection.query(
-        'INSERT INTO propietario (id_user_data, id_apartamento) VALUES (?, ?)',
-        [idUsuario, apartamento[0].id]
-      );
-    }
 
     await connection.commit();
     res.status(201).json({ message: 'Usuario registrado exitosamente' });

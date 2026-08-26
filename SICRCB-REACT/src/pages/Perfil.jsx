@@ -7,6 +7,8 @@ import api from "../services/api"
 function Perfil() {
   const navigate = useNavigate()
   const [usuario, setUsuario] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     nombres: "",
@@ -14,23 +16,51 @@ function Perfil() {
     email: "",
     numeroDocumento: "",
     tipoDocumento: "",
-    celular: ""
+    celular: "",
+    contraseña: ""
   })
 
   useEffect(() => {
-    const userFromStorage = localStorage.getItem("user")
-    if (userFromStorage) {
-      const userData = JSON.parse(userFromStorage)
-      setUsuario(userData)
-      setFormData({
-        nombres: userData.nombres || "",
-        apellidos: userData.apellidos || "",
-        email: userData.email || "",
-        numeroDocumento: userData.numeroDocumento || "",
-        tipoDocumento: userData.tipoDocumento || "",
-        celular: userData.celular || ""
-      })
+    const fetchUser = async () => {
+      try {
+        const response = await api.get("/usuarios/me")
+        const userData = response.data
+        setUsuario(userData)
+        setFormData({
+          nombres: userData.nombres || "",
+          apellidos: userData.apellidos || "",
+          email: userData.email || "",
+          numeroDocumento: userData.numeroDocumento || "",
+          tipoDocumento: userData.tipoDocumento || "",
+          celular: userData.celular || "",
+          contraseña: ""  // Don't pre-fill password
+        })
+        // Also update localStorage with fresh data
+        localStorage.setItem("user", JSON.stringify(userData))
+      } catch (err) {
+        console.error("Error fetching user data:", err)
+        setError("No se pudo cargar la información del usuario")
+        // Fallback to localStorage
+        const userFromStorage = localStorage.getItem("user")
+        if (userFromStorage) {
+          const userData = JSON.parse(userFromStorage)
+          setUsuario(userData)
+          setFormData({
+            nombres: userData.nombres || "",
+            apellidos: userData.apellidos || "",
+            email: userData.email || "",
+            numeroDocumento: userData.numeroDocumento || "",
+            tipoDocumento: userData.tipoDocumento || "",
+            celular: userData.celular || "",
+            contraseña: ""  // Don't pre-fill password
+          })
+        }
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchUser()
   }, [])
 
   const handleChange = (e) => {
@@ -52,13 +82,20 @@ function Perfil() {
     }
 
     try {
+      // Prepare payload: convert empty strings to null for text fields
+      // Hash password if provided (backend will hash with SHA2(?, 256))
       const payload = {
-        nombres: formData.nombres,
-        apellidos: formData.apellidos,
-        numeroDocumento: formData.numeroDocumento,
-        tipoDocumento: formData.tipoDocumento,
-        celular: formData.celular,
-        email: formData.email,
+        nombres: formData.nombres === "" ? null : formData.nombres,
+        apellidos: formData.apellidos === "" ? null : formData.apellidos,
+        numeroDocumento: formData.numeroDocumento === "" ? null : formData.numeroDocumento,
+        tipoDocumento: formData.tipoDocumento === "" ? null : formData.tipoDocumento,
+        celular: formData.celular === "" ? null : formData.celular,
+        email: formData.email === "" ? null : formData.email,
+      }
+
+      // Only add password to payload if it's provided and not empty
+      if (formData.contraseña && formData.contraseña.trim() !== "") {
+        payload.contraseña = formData.contraseña
       }
 
       const response = await api.put(`/usuarios/me`, payload)
@@ -66,11 +103,25 @@ function Perfil() {
       setUsuario(updatedUser)
       localStorage.setItem("user", JSON.stringify(updatedUser))
       setIsEditing(false)
+      setError(null)
       alert("Perfil actualizado correctamente")
     } catch (error) {
       console.error("Error al actualizar el perfil:", error)
+      setError("No se pudo guardar el perfil. Intente de nuevo.")
       alert("No se pudo guardar el perfil. Intente de nuevo.")
     }
+  }
+
+  if (loading) {
+    return (
+      <>
+        <NavbarApp onLogout={handleLogout} />
+        <div className="titulo">
+          <h1>PERFIL DE USUARIO</h1>
+        </div>
+        <p style={{ textAlign: "center", marginTop: "20px" }}>Cargando información...</p>
+      </>
+    )
   }
 
   if (!usuario) {
@@ -80,7 +131,7 @@ function Perfil() {
         <div className="titulo">
           <h1>PERFIL DE USUARIO</h1>
         </div>
-        <p style={{ textAlign: "center", marginTop: "20px" }}>Cargando información...</p>
+        <p style={{ textAlign: "center", marginTop: "20px" }}>Error al cargar la información</p>
       </>
     )
   }
@@ -172,6 +223,18 @@ function Perfil() {
               placeholder="Celular"
               className="input"
               value={formData.celular}
+              onChange={handleChange}
+              disabled={!isEditing}
+            />
+            <hr />
+
+            <label className="form-label">Contraseña (dejar vacío para no cambiar)</label>
+            <input
+              type="password"
+              name="contraseña"
+              placeholder="Nueva contraseña"
+              className="input"
+              value={formData.contraseña}
               onChange={handleChange}
               disabled={!isEditing}
             />

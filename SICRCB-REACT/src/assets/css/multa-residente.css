@@ -119,6 +119,7 @@
 }
 
 
+/* Mensaje vacío */
 .multas-vacio {
   color: #a37b5e;
   font-style: italic;
@@ -340,4 +341,128 @@
 @media (max-width: 576px) {
   .multas-page .custom-tabs .nav-item .nav-link,
   .multas-page .custom-tabs .nav-link { width: 100% !important; margin-right: 0 !important; margin-bottom: 0.5rem !important; }
+}
+
+/* ===== NUEVOS ESTILOS PARA TARJETAS DE MULTAS (RESIDENTE) ===== */
+
+/* Contenedor de tarjetas */
+.multas-cards-container {
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* Tarjeta individual */
+.multa-card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(140, 50, 0, 0.08);
+  border: 1px solid #ffe6cc;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 100%; /* Para hacer que todas las tarjetas tengan la misma altura en la fila */
+  display: flex;
+  flex-direction: column;
+}
+
+.multa-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(140, 50, 0, 0.12);
+}
+
+/* Encabezado de la tarjeta */
+.multa-card-header {
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+  padding: 1.5rem;
+  border-bottom: 1px solid #ffe6cc;
+}
+
+.multa-title {
+  color: rgb(140, 50, 0);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.multa-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.multa-number {
+  background-color: rgba(140, 50, 0, 0.1);
+  color: rgb(140, 50, 0);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Cuerpo de la tarjeta */
+.multa-card-body {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.multa-description {
+  color: #4a3226;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  flex-grow: 1;
+}
+
+.multa-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+.multa-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #5a4233;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: rgb(140, 50, 0);
+}
+
+.detail-value {
+  font-weight: 500;
+}
+
+/* Mensaje vacío para tarjetas */
+.multas-vacio-cards {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #a37b5e;
+  font-style: italic;
+  font-size: 1.1rem;
+  background-color: rgba(255, 224, 160, 0.3);
+  border-radius: 12px;
+  border: 2px dashed #FFD0A0;
+}
+
+/* Responsive para tarjetas */
+@media (min-width: 576px) {
+  .multas-cards-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .multas-cards-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }

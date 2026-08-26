@@ -1,0 +1,6 @@
+◇ injected env (5) from .env // tip: ⌘ suppress logs { quiet: true }
+DB_NAME cargado como: sicrcb | DB_PASSWORD definido: true
+Servidor ejecutándose en puerto 5001
+Error en registro: Error: Tipo de documento no encontrado
+    at /home/tocorita_d1/Descargas/SICRCB_F_2/backend/routes/auth.js:87:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)

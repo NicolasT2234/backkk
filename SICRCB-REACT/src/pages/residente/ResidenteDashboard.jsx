@@ -76,7 +76,7 @@ function ResidenteDashboard() {
         })
 
       // Fetch upcoming reservations (sorted by start date ascending)
-      api.get(`/alquileres/mis-alquileres?_sort=fecha_inicio&_order=ASC`)
+      api.get(`/alquileres/mis-alquileres`)
         .then(res => {
           const reservas = Array.isArray(res.data) ? res.data : []
           // Show upcoming reservations (future dates) - but for simplicity, we'll show first 5

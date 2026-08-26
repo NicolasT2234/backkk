@@ -4,6 +4,12 @@ const { verificarToken, verificarRol } = require('../auth');
 
 const router = express.Router();
 
+// Debug middleware to see all requests
+router.use((req, res, next) => {
+  console.log(`[USUARIOS DEBUG] ${req.method} ${req.path}`);
+  next();
+});
+
 // GET /usuarios (solo administradores)
 router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
@@ -24,6 +30,39 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
     res.json(usuarios);
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /usuarios/me
+router.get('/me', verificarToken, async (req, res) => {
+  console.log('DEBUG: /me endpoint called, user:', req.usuario);
+  try {
+    const [usuarios] = await pool.query(
+      `SELECT u.id, u.email, r.nombre as rol,
+              ud.primer_nombre as nombres,
+              ud.primer_apellido as apellidos,
+              ud.numero_documento as numeroDocumento,
+              td.sigla as tipoDocumento,
+              '' as celular
+       FROM usuario u
+       JOIN rol_usuario ru ON u.id = ru.id_user
+       JOIN rol r ON ru.id_rol = r.id
+       LEFT JOIN user_data ud ON u.id = ud.id_usuario
+       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
+       WHERE u.id = ?`,
+      [req.usuario.id]
+    );
+
+    console.log('DEBUG: Query result:', usuarios);
+    if (usuarios.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Excluir la contraseña (ya no se selecciona en la query)
+    res.json(usuarios[0]);
+  } catch (error) {
+    console.error('Error al obtener datos del usuario:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -146,37 +185,6 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
     res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
     connection.release();
-  }
-});
-
-// GET /usuarios/me
-router.get('/me', verificarToken, async (req, res) => {
-  try {
-    const [usuarios] = await pool.query(
-      `SELECT u.id, u.email, r.nombre as rol,
-              ud.primer_nombre as nombres,
-              ud.primer_apellido as apellidos,
-              ud.numero_documento as numeroDocumento,
-              td.sigla as tipoDocumento,
-              '' as celular
-       FROM usuario u
-       JOIN rol_usuario ru ON u.id = ru.id_user
-       JOIN rol r ON ru.id_rol = r.id
-       LEFT JOIN user_data ud ON u.id = ud.id_usuario
-       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
-       WHERE u.id = ?`,
-      [req.usuario.id]
-    );
-
-    if (usuarios.length === 0) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
-
-    // Excluir la contraseña (ya no se selecciona en la query)
-    res.json(usuarios[0]);
-  } catch (error) {
-    console.error('Error al obtener datos del usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

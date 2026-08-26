@@ -1,6 +1,6 @@
 import { Navbar, Container, Nav } from "react-bootstrap"
 import { useNavigate, useLocation } from "react-router-dom"
-import logo from "../assets/img/Logo_SICRCB.png"
+import logo from "../assets/img/Logo_SICRCB_dark_bg.png"
 import "../assets/css/NavbarApp.css"
 
 function NavbarApp({ onLogout }) {

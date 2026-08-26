@@ -59,7 +59,7 @@
     padding: 0 5vw 5vh 5vw;
 }
 
-/* Card-like container ( matches .a-noticia ,               �
+/* Card-like container (matches .a-noticia from other pages) */
 /* Card container - matches .a-noticia from Alquiler, Multas, Noticias */
 .dashboard-page .a-noticia {
     background-color: rgb(140, 50, 0); /* same as primary */
@@ -96,7 +96,7 @@
 }
 
 .dashboard-page .a-noticia:hover::before {
-    background: rgba(255, 25,⁨255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .dashboard-page .a-noticia:hover {

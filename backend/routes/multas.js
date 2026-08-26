@@ -8,18 +8,19 @@ const router = express.Router();
 router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
     const [multas] = await pool.query(
-      `SELECT m.id, m.nombre, m.descripcion, m.fecha_vencimiento, m.fecha_pago, m.estado,
-              ap.bloque, ap.numero, i.descripcion as interior,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+      `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
+              b.nombre as bloque, ap.numero,
+              ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
               tm.valor as monto
        FROM multa m
        JOIN apartamento ap ON m.id_apartamento = ap.id
        JOIN interior i ON ap.id_interior = i.id
-       JOIN bloque b ON ap.id_bloque = b.id
-       JOIN propietario p ON ap.id = p.id_apartamento
-       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       JOIN bloque b ON i.id_bloque = b.id
+       LEFT JOIN propietario_gestion_apartamento pga ON pga.id_apartamento = ap.id AND pga.estado = 'Activo'
+       LEFT JOIN propietario p ON pga.id_propietario = p.id
+       LEFT JOIN user_data ud ON p.id_user_data = ud.id
        JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
-       ORDER BY m.fecha_vencimiento ASC`
+       ORDER BY m.estado ASC, m.id DESC`
     );
     res.json(multas);
   } catch (error) {
@@ -33,16 +34,17 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   try {
     const { id } = req.params;
     const [multas] = await pool.query(
-      `SELECT m.id, m.nombre, m.descripcion, m.fecha_vencimiento, m.fecha_pago, m.estado,
-              ap.bloque, ap.numero, i.descripcion as interior,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+      `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
+              b.nombre as bloque, ap.numero,
+              ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
               tm.valor as monto
        FROM multa m
        JOIN apartamento ap ON m.id_apartamento = ap.id
        JOIN interior i ON ap.id_interior = i.id
-       JOIN bloque b ON ap.id_bloque = b.id
-       JOIN propietario p ON ap.id = p.id_apartamento
-       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       JOIN bloque b ON i.id_bloque = b.id
+       LEFT JOIN propietario_gestion_apartamento pga ON pga.id_apartamento = ap.id AND pga.estado = 'Activo'
+       LEFT JOIN propietario p ON pga.id_propietario = p.id
+       LEFT JOIN user_data ud ON p.id_user_data = ud.id
        JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
        WHERE m.id = ?`,
       [id]
@@ -61,16 +63,16 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
 
 // POST /multas (solo administradores)
 router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, fechaVencimiento, idApartamento } = req.body;
+  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, idApartamento } = req.body;
 
-  if (!nombre || !descripcion || !id_tipo_multa || !id_administrador || !evidencia || !fechaVencimiento || !idApartamento) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, descripcion, id_tipo_multa, id_administrador, evidencia, fechaVencimiento, idApartamento' });
+  if (!nombre || !descripcion || !id_tipo_multa || !id_administrador || !evidencia || !idApartamento) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, descripcion, id_tipo_multa, id_administrador, evidencia, idApartamento' });
   }
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO multa (nombre, descripcion, id_tipo_multa, id_administrador, evidencia, fecha_vencimiento, estado, id_apartamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [nombre, descripcion, id_tipo_multa, id_administrador, evidencia, fechaVencimiento, 'Pendiente', idApartamento]
+      'INSERT INTO multa (numero, nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, id_apartamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [Date.now(), nombre, descripcion, id_tipo_multa, id_administrador, evidencia, 'Pendiente', idApartamento]
     );
     res.status(201).json({ message: 'Multa creada exitosamente', id: result.insertId });
   } catch (error) {
@@ -81,10 +83,10 @@ router.post('/', verificarToken, verificarRol('Administrador'), async (req, res)
 
 // PUT /multas/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, fechaVencimiento, fechaPago, estado } = req.body;
+  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado } = req.body;
   const { id } = req.params;
 
-  if (!nombre && !descripcion && !id_tipo_multa && !id_administrador && !evidencia && !fechaVencimiento && !fechaPago && !estado) {
+  if (!nombre && !descripcion && !id_tipo_multa && !id_administrador && !evidencia && !estado) {
     return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
   }
 
@@ -114,14 +116,6 @@ router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     if (evidencia !== undefined) {
       updates.push('evidencia = ?');
       values.push(evidencia);
-    }
-    if (fechaVencimiento !== undefined) {
-      updates.push('fecha_vencimiento = ?');
-      values.push(fechaVencimiento);
-    }
-    if (fechaPago !== undefined) {
-      updates.push('fecha_pago = ?');
-      values.push(fechaPago);
     }
     if (estado !== undefined) {
       updates.push('estado = ?');
@@ -168,25 +162,23 @@ router.get('/mis-multas', verificarToken, async (req, res) => {
     const idUsuario = req.usuario.id;
 
     const [multas] = await pool.query(
-      `SELECT m.id, m.nombre, m.descripcion, m.fecha_vencimiento, m.fecha_pago, m.estado,
-              ap.bloque, ap.numero, i.descripcion as interior,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+      `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
+              b.nombre as bloque, ap.numero,
               tm.valor as monto
        FROM multa m
        JOIN apartamento ap ON m.id_apartamento = ap.id
        JOIN interior i ON ap.id_interior = i.id
-       JOIN bloque b ON ap.id_bloque = b.id
-       JOIN propietario p ON ap.id = p.id_apartamento
-       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       JOIN bloque b ON i.id_bloque = b.id
        JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
        WHERE ap.id IN (
-         SELECT ap.id FROM apartamento ap
-         JOIN propietario pt ON ap.id = pt.id_apartamento
-         JOIN user_data ud ON pt.id_user_data = ud.id_usuario
-         WHERE ud.id_usuario = ?
+         SELECT pga.id_apartamento
+         FROM propietario_gestion_apartamento pga
+         JOIN propietario pt ON pga.id_propietario = pt.id
+         JOIN user_data ud ON pt.id_user_data = ud.id
+         WHERE ud.id_usuario = ? AND pga.estado = 'Activo'
        )
        AND m.estado = ?
-       ORDER BY m.fecha_vencimiento ASC`,
+       ORDER BY m.id DESC`,
       [idUsuario, 'Pendiente']
     );
 

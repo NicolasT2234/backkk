@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../../services/api"
 import "../../assets/css/styles.css"
@@ -39,6 +39,30 @@ function Multas() {
   const [showDeleteCard, setShowDeleteCard] = useState(false)
   const [activeTab, setActiveTab] = useState("nueva")
 
+  // States for the general list of multas
+  const [multas, setMultas] = useState([])
+  const [multasLoading, setMultasLoading] = useState(true)
+  const [multasError, setMultasError] = useState("")
+
+  useEffect(() => {
+    const fetchMultasList = async () => {
+      setMultasLoading(true)
+      setMultasError("")
+      try {
+        const res = await api.get("/multas")
+        setMultas(Array.isArray(res.data) ? res.data : [])
+      } catch (err) {
+        console.error("Error fetching multas list:", err)
+        setMultasError("No se pudo cargar la lista de multas")
+        setMultas([])
+      } finally {
+        setMultasLoading(false)
+      }
+    }
+
+    fetchMultasList()
+  }, [])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSuccess("")
@@ -62,6 +86,10 @@ function Multas() {
       setSuccess(id ? `Multa agregada con éxito (ID: ${id})` : "Multa agregada con éxito")
 
       setFormData({ factura: null, fechaPublicacion: "" })
+
+      // Refresh the list after adding a new multa
+      const res2 = await api.get("/multas")
+      setMultas(Array.isArray(res2.data) ? res2.data : [])
     } catch (err) {
       console.error("Error creating multa:", err)
       const serverMsg = err.response?.data?.message || err.response?.data || err.message
@@ -70,6 +98,7 @@ function Multas() {
   }
 
   const handleSearch = async () => {
+    // We'll keep this for backward compatibility, but the main list view will handle searching
     setSearchResult(null)
     setError("")
 
@@ -120,6 +149,10 @@ function Multas() {
       setUpdateSuccess(id ? `Multa actualizada correctamente (ID: ${id})` : "Multa actualizada correctamente")
       setUpdateId("")
       setNuevoEstado(null)
+
+      // Refresh the list after updating
+      const res2 = await api.get("/multas")
+      setMultas(Array.isArray(res2.data) ? res2.data : [])
     } catch (err) {
       console.error("Error updating multa:", err)
       const serverMsg = err.response?.data?.message || err.response?.data || err.message
@@ -152,6 +185,10 @@ function Multas() {
       setDeleteSuccess("Multa eliminada correctamente")
       setDeleteId("")
       setShowDeleteCard(false)
+
+      // Refresh the list after deletion
+      const res = await api.get("/multas")
+      setMultas(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
       console.error("Error deleting multa:", err)
       const serverMsg = err.response?.data?.message || err.response?.data || err.message
@@ -230,15 +267,51 @@ function Multas() {
                   </div>
                   {error && <p className="error">{error}</p>}
 
-                  {searchResult && (
-                    <div className="search-result">
-                      <p><strong>ID:</strong> {searchResult.id || searchResult._id}</p>
-                      <p><strong>Estado:</strong> {searchResult.estado}</p>
-                      <div className="form-row">
-                        <p><strong>Fecha:</strong> {searchResult.fechaPublicacion}</p>
+                  {/* Show the list of multas (all or filtered) */}
+                  <div className="multas-list">
+                    {multasLoading && <p className="hint">Cargando lista de multas...</p>}
+                    {multasError && <p className="error">{multasError}</p>}
+                    {!multasLoading && !multasError && multas.length === 0 && (
+                      <p className="hint">No hay multas registradas.</p>
+                    )}
+                    {!multasLoading && !multasError && multas.length > 0 && (
+                      <div className="table-wrapper">
+                        <table className="multas-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Descripción</th>
+                              <th>Monto</th>
+                              <th>Estado</th>
+                              <th>Fecha Vencimiento</th>
+                              <th>Fecha Pago</th>
+                              <th>Apartamento</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {multas
+                              // Filter by searchId if provided
+                              .filter(multa => !searchId.trim() || multa.id?.toString() === searchId.trim())
+                              .map((multa, index) => (
+                                <tr key={index}>
+                                  <td>{multa.id}</td>
+                                  <td>{multa.descripcion}</td>
+                                  <td>${Number(multa.monto).toLocaleString()}</td>
+                                  <td>
+                                    <span className={`badge ${multa.estado.toLowerCase() === 'pendiente' ? 'badge-pendiente' : multa.estado.toLowerCase() === 'pagado' ? 'badge-pagado' : 'badge-otros'}`}>
+                                      {multa.estado}
+                                    </span>
+                                  </td>
+                                  <td>{multa.fecha_vencimiento ? new Date(multa.fecha_vencimiento).toLocaleDateString() : '-'}</td>
+                                  <td>{multa.fecha_pago ? new Date(multa.fecha_pago).toLocaleDateString() : '-'}</td>
+                                  <td>{multa.bloque}-${multa.numero}${multa.interior ? '-' + multa.interior : ''}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -278,12 +351,12 @@ function Multas() {
                 <div>
                   <div className="form-row">
                     <div className="form-field">
-                      <label className="form-label">ID de la multa</label>
+                      <label className="form-label">ID de la multa para eliminar</label>
                       <input type="text" placeholder="#12345" className="input" value={deleteId} onChange={(e) => setDeleteId(e.target.value)} />
                     </div>
                   </div>
                   <div className="form-footer">
-                    <button type="button" className="btn-danger" onClick={openDeleteConfirm}>Eliminar</button>
+                    <button type="button" onClick={openDeleteConfirm}>Eliminar</button>
                   </div>
                   {deleteSuccess && <p className="success">{deleteSuccess}</p>}
                   {deleteError && <p className="error">{deleteError}</p>}
