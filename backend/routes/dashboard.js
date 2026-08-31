@@ -65,20 +65,31 @@ router.get('/residente', verificarToken, async (req, res) => {
     // Multas pendientes del propietario
     const [multas] = await pool.query(
       `SELECT m.id, m.descripcion, m.fecha_vencimiento, m.fecha_pago, m.estado,
-              b.nombre as bloque, a.numero, i.descripcion as interior,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+              b.nombre as bloque, a.numero, i.numero as interior,
+              ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
               tm.valor as monto
        FROM multa m
        JOIN apartamento a ON m.id_apartamento = a.id
        JOIN interior i ON a.id_interior = i.id
        JOIN bloque b ON a.id_bloque = b.id
-       JOIN propietario p ON a.id = p.id_apartamento
-       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       LEFT JOIN (
+           SELECT pga.id_apartamento, pga.id_propietario
+           FROM propietario_gestion_apartamento pga
+           WHERE pga.estado = 'Activo'
+           AND pga.fecha_registro = (
+               SELECT MAX(pga2.fecha_registro)
+               FROM propietario_gestion_apartamento pga2
+               WHERE pga2.id_apartamento = pga.id_apartamento
+               AND pga2.estado = 'Activo'
+           )
+       ) latest_pga ON latest_pga.id_apartamento = a.id
+       LEFT JOIN propietario p ON latest_pga.id_propietario = p.id
+       LEFT JOIN user_data ud ON p.id_user_data = ud.id
        JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
        WHERE a.id IN (
          SELECT ap.id FROM apartamento ap
          JOIN propietario pt ON ap.id = pt.id_apartamento
-         JOIN user_data ud ON pt.id_user_data = ud.id_usuario
+         JOIN user_data ud ON pt.id_user_data = ud.id
          WHERE ud.id_usuario = ?
        )
        AND m.estado = ?`,
@@ -88,7 +99,7 @@ router.get('/residente', verificarToken, async (req, res) => {
     // Próximas reservas de alquiler
     const [alquileres] = await pool.query(
       `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado,
-              b.nombre as bloque, a.numero, i.descripcion as interior,
+              b.nombre as bloque, a.numero, i.numero as interior,
               -- Calculate monto_total as duration in hours * valor_hora
               TIMESTAMPDIFF(HOUR, a.hora_inicio, a.hora_fin) * a.valor_hora as monto_total
        FROM alquiler a

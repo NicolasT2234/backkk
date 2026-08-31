@@ -10,17 +10,41 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
     const [alquileres] = await pool.query(
       `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado,
               p.id as id_propietario,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+              ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
               s.id as id_salon_comunal
        FROM alquiler a
        JOIN propietario p ON a.id_propietario = p.id
-       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       JOIN user_data ud ON p.id_user_data = ud.id
        LEFT JOIN salon_comunal s ON a.id_salon_comunal = s.id
        ORDER BY a.hora_inicio DESC`
     );
     res.json(alquileres);
   } catch (error) {
     console.error('Error al obtener alquileres:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /mis-alquileres (debe ir ANTES de /:id, si no Express lo confunde con un :id)
+router.get('/mis-alquileres', verificarToken, async (req, res) => {
+  try {
+    const idUsuario = req.usuario.id;
+
+    const [alquileres] = await pool.query(
+      `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado
+       FROM alquiler a
+       WHERE a.id_propietario = (
+         SELECT p.id FROM propietario p
+         JOIN user_data ud ON p.id_user_data = ud.id
+         WHERE ud.id_usuario = ?
+       )
+       ORDER BY a.hora_inicio DESC`,
+      [idUsuario]
+    );
+
+    res.json(alquileres);
+  } catch (error) {
+    console.error('Error al obtener mis alquileres:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -32,11 +56,11 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     const [alquileres] = await pool.query(
       `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado,
               p.id as id_propietario,
-              ud.nombre as nombre_propietario, ud.apellido as apellido_propietario,
+              ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
               s.id as id_salon_comunal
        FROM alquiler a
        JOIN propietario p ON a.id_propietario = p.id
-       JOIN user_data ud ON p.id_user_data = ud.id_usuario
+       JOIN user_data ud ON p.id_user_data = ud.id
        LEFT JOIN salon_comunal s ON a.id_salon_comunal = s.id
        WHERE a.id = ?`,
       [id]
@@ -163,30 +187,6 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
     res.json({ message: 'Alquiler eliminado exitosamente' });
   } catch (error) {
     console.error('Error al eliminar alquiler:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// GET /mis-alquileres
-router.get('/mis-alquileres', verificarToken, async (req, res) => {
-  try {
-    const idUsuario = req.usuario.id;
-
-    const [alquileres] = await pool.query(
-      `SELECT a.id, a.descripcion, a.hora_inicio, a.hora_fin, a.valor_hora, a.estado
-       FROM alquiler a
-       WHERE a.id_propietario = (
-         SELECT p.id FROM propietario p
-         JOIN user_data ud ON p.id_user_data = ud.id_usuario
-         WHERE ud.id_usuario = ?
-       )
-       ORDER BY a.hora_inicio DESC`,
-      [idUsuario]
-    );
-
-    res.json(alquileres);
-  } catch (error) {
-    console.error('Error al obtener mis alquileres:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

@@ -9,17 +9,32 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
   try {
     const [multas] = await pool.query(
       `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
-              b.nombre as bloque, ap.numero,
+              b.nombre as bloque, ap.numero as numero_apartamento,
               ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
-              tm.valor as monto
+              tm.valor as monto,
+              m.evidencia, m.id_apartamento, m.id_tipo_multa,
+              tm.numero as numero_tipo_multa, tm.descripcion as descripcion_tipo_multa,
+              uad.primer_nombre as nombre_administrador, uad.primer_apellido as apellido_administrador
        FROM multa m
        JOIN apartamento ap ON m.id_apartamento = ap.id
        JOIN interior i ON ap.id_interior = i.id
        JOIN bloque b ON i.id_bloque = b.id
-       LEFT JOIN propietario_gestion_apartamento pga ON pga.id_apartamento = ap.id AND pga.estado = 'Activo'
-       LEFT JOIN propietario p ON pga.id_propietario = p.id
+       LEFT JOIN (
+           SELECT pga.id_apartamento, pga.id_propietario
+           FROM propietario_gestion_apartamento pga
+           WHERE pga.estado = 'Activo'
+           AND pga.fecha_registro = (
+               SELECT MAX(pga2.fecha_registro)
+               FROM propietario_gestion_apartamento pga2
+               WHERE pga2.id_apartamento = pga.id_apartamento
+               AND pga2.estado = 'Activo'
+           )
+       ) latest_pga ON latest_pga.id_apartamento = ap.id
+       LEFT JOIN propietario p ON latest_pga.id_propietario = p.id
        LEFT JOIN user_data ud ON p.id_user_data = ud.id
        JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
+       JOIN administrador a ON m.id_administrador = a.id
+       JOIN user_data uad ON a.id_user_data = uad.id
        ORDER BY m.estado ASC, m.id DESC`
     );
     res.json(multas);
@@ -35,17 +50,32 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     const { id } = req.params;
     const [multas] = await pool.query(
       `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
-              b.nombre as bloque, ap.numero,
+              b.nombre as bloque, ap.numero as numero_apartamento,
               ud.primer_nombre as nombre_propietario, ud.primer_apellido as apellido_propietario,
-              tm.valor as monto
+              tm.valor as monto,
+              m.evidencia, m.id_apartamento, m.id_tipo_multa,
+              tm.numero as numero_tipo_multa, tm.descripcion as descripcion_tipo_multa,
+              uad.primer_nombre as nombre_administrador, uad.primer_apellido as apellido_administrador
        FROM multa m
        JOIN apartamento ap ON m.id_apartamento = ap.id
        JOIN interior i ON ap.id_interior = i.id
        JOIN bloque b ON i.id_bloque = b.id
-       LEFT JOIN propietario_gestion_apartamento pga ON pga.id_apartamento = ap.id AND pga.estado = 'Activo'
-       LEFT JOIN propietario p ON pga.id_propietario = p.id
+       LEFT JOIN (
+           SELECT pga.id_apartamento, pga.id_propietario
+           FROM propietario_gestion_apartamento pga
+           WHERE pga.estado = 'Activo'
+           AND pga.fecha_registro = (
+               SELECT MAX(pga2.fecha_registro)
+               FROM propietario_gestion_apartamento pga2
+               WHERE pga2.id_apartamento = pga.id_apartamento
+               AND pga2.estado = 'Activo'
+           )
+       ) latest_pga ON latest_pga.id_apartamento = ap.id
+       LEFT JOIN propietario p ON latest_pga.id_propietario = p.id
        LEFT JOIN user_data ud ON p.id_user_data = ud.id
        JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
+       JOIN administrador a ON m.id_administrador = a.id
+       JOIN user_data uad ON a.id_user_data = uad.id
        WHERE m.id = ?`,
       [id]
     );
@@ -63,16 +93,56 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
 
 // POST /multas (solo administradores)
 router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, idApartamento } = req.body;
+  const { nombre, descripcion, id_tipo_multa, evidencia, idApartamento } = req.body;
 
-  if (!nombre || !descripcion || !id_tipo_multa || !id_administrador || !evidencia || !idApartamento) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, descripcion, id_tipo_multa, id_administrador, evidencia, idApartamento' });
+  if (!nombre || !descripcion || !id_tipo_multa || !evidencia || !idApartamento) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, descripcion, id_tipo_multa, evidencia, idApartamento' });
+  }
+
+  // Resolver id_administrador desde el usuario logueado
+  // req.usuario.id is the usuario.id from JWT
+  // Need to find the administrador id that corresponds to this usuario
+  let idAdministrador;
+  try {
+    const [userDataRows] = await pool.query(
+      'SELECT id FROM user_data WHERE id_usuario = ?',
+      [req.usuario.id]
+    );
+
+    if (userDataRows.length === 0) {
+      return res.status(400).json({ error: 'Usuario data no encontrada' });
+    }
+
+    const userDataId = userDataRows[0].id;
+
+    const [adminRows] = await pool.query(
+      'SELECT id FROM administrador WHERE id_user_data = ?',
+      [userDataId]
+    );
+
+    if (adminRows.length === 0) {
+      return res.status(400).json({ error: 'Administrador no encontrado para este usuario' });
+    }
+
+    idAdministrador = adminRows[0].id;
+  } catch (error) {
+    console.error('Error al obtener administrador:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+
+  // Validar estado si se proporciona (valor por defecto: 'Pendiente')
+  let estadoValor = 'Pendiente';
+  if (req.body.estado !== undefined) {
+    if (!['Pendiente','En proceso','Resuelta'].includes(req.body.estado)) {
+      return res.status(400).json({ error: 'Estado inválido' });
+    }
+    estadoValor = req.body.estado;
   }
 
   try {
     const [result] = await pool.query(
       'INSERT INTO multa (numero, nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, id_apartamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [Date.now(), nombre, descripcion, id_tipo_multa, id_administrador, evidencia, 'Pendiente', idApartamento]
+      [Date.now(), nombre, descripcion, id_tipo_multa, idAdministrador, evidencia, estadoValor, idApartamento]
     );
     res.status(201).json({ message: 'Multa creada exitosamente', id: result.insertId });
   } catch (error) {
@@ -83,11 +153,16 @@ router.post('/', verificarToken, verificarRol('Administrador'), async (req, res)
 
 // PUT /multas/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado } = req.body;
+  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, idApartamento } = req.body;
   const { id } = req.params;
 
-  if (!nombre && !descripcion && !id_tipo_multa && !id_administrador && !evidencia && !estado) {
+  if (!nombre && !descripcion && !id_tipo_multa && !id_administrador && !evidencia && !estado && !idApartamento) {
     return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
+  }
+
+  // Validar estado si se proporciona
+  if (estado !== undefined && !['Pendiente','En proceso','Resuelta'].includes(estado)) {
+    return res.status(400).json({ error: 'Estado inválido' });
   }
 
   const connection = await pool.getConnection();
@@ -116,6 +191,10 @@ router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     if (evidencia !== undefined) {
       updates.push('evidencia = ?');
       values.push(evidencia);
+    }
+    if (idApartamento !== undefined) {
+      updates.push('id_apartamento = ?');
+      values.push(idApartamento);
     }
     if (estado !== undefined) {
       updates.push('estado = ?');

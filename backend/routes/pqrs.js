@@ -9,8 +9,8 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
   try {
     const [pqrs] = await pool.query(
       `SELECT p.id, p.descripcion, p.fecha_creacion, p.estado, p.tipo,
-              u.nombre as nombre_usuario, u.apellido as apellido_usuario,
-              ap.bloque, ap.numero, i.descripcion as interior
+              u.email as nombre_usuario, '' as apellido_usuario,
+              b.nombre as bloque, ap.numero, i.numero as interior
        FROM pqr p
        JOIN usuario u ON p.id_usuario = u.id
        JOIN pqr_especifica pe ON p.id = pe.id_pqr
