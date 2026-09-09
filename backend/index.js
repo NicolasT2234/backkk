@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const authRoutes = require('./routes/auth');
 const usuariosRoutes = require('./routes/usuarios');
@@ -16,9 +17,27 @@ const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
+// Centralized error handling middleware
+const errorHandler = (err, req, res, next) => {
+  console.error('Error:', err);
+
+  // If headers already sent, delegate to Express' default error handler
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  // Default error response
+  res.status(500).json({ error: 'Error interno del servidor' });
+};
+
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -41,6 +60,9 @@ app.use('/api/apartamentos', apartamentosRoutes);
 app.use('/api/salon-comunal', salonComunalRoutes);
 app.use('/api/sillas', sillasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+
+// Error handling middleware (should be last)
+app.use(errorHandler);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

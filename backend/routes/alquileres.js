@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
     res.json(alquileres);
   } catch (error) {
     console.error('Error al obtener alquileres:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -45,7 +46,7 @@ router.get('/mis-alquileres', verificarToken, async (req, res) => {
     res.json(alquileres);
   } catch (error) {
     console.error('Error al obtener mis alquileres:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -73,17 +74,25 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     res.json(alquileres[0]);
   } catch (error) {
     console.error('Error al obtener alquiler:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /alquileres (cualquier usuario autenticado puede crear su propia reserva)
-router.post('/', verificarToken, async (req, res) => {
-  const { descripcion, horaInicio, horaFin, valorHora } = req.body;
+router.post('/',
+  [
+    body('descripcion').trim().notEmpty().withMessage('Descripción requerida'),
+    body('horaInicio').trim().notEmpty().withMessage('Hora de inicio requerida'),
+    body('horaFin').trim().notEmpty().withMessage('Hora de fin requerida'),
+    body('valorHora').isFloat({ gt: 0 }).withMessage('Valor hora debe ser un número positivo')
+  ],
+  verificarToken, async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  if (!descripcion || !horaInicio || !horaFin || !valorHora) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: descripcion, horaInicio, horaFin, valorHora' });
-  }
+    const { descripcion, horaInicio, horaFin, valorHora } = req.body;
 
   const idUsuario = req.usuario.id;
   const connection = await pool.getConnection();
@@ -114,20 +123,29 @@ router.post('/', verificarToken, async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Error al crear alquiler:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   } finally {
     connection.release();
   }
 });
 
 // PUT /alquileres/:id (solo administradores)
-router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { descripcion, horaInicio, horaFin, valorHora, estado } = req.body;
-  const { id } = req.params;
+router.put('/:id',
+  [
+    body('descripcion').optional().trim().notEmpty().withMessage('Descripción no puede estar vacía'),
+    body('horaInicio').optional().trim().notEmpty().withMessage('Hora de inicio requerida si se proporciona'),
+    body('horaFin').optional().trim().notEmpty().withMessage('Hora de fin requerida si se proporciona'),
+    body('valorHora').optional().isFloat({ gt: 0 }).withMessage('Valor hora debe ser un número positivo si se proporciona'),
+    body('estado').optional().trim().notEmpty().withMessage('Estado no puede estar vacío si se proporciona')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  if (!descripcion && !horaInicio && !horaFin && !valorHora && !estado) {
-    return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
-  }
+    const { descripcion, horaInicio, horaFin, valorHora, estado } = req.body;
+    const { id } = req.params;
 
   const connection = await pool.getConnection();
   try {
@@ -173,7 +191,7 @@ router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, re
   } catch (error) {
     await connection.rollback();
     console.error('Error al actualizar alquiler:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   } finally {
     connection.release();
   }

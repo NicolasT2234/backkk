@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.get('/', verificarToken, async (req, res) => {
     res.json(tiposMulta);
   } catch (error) {
     console.error('Error al obtener tipos de multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -37,29 +38,42 @@ router.get('/:id', verificarToken, async (req, res) => {
     res.json(tiposMulta[0]);
   } catch (error) {
     console.error('Error al obtener tipo de multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /tipos_multa (crear un nuevo tipo de multa - solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { numero, descripcion, valor, estado } = req.body;
+router.post('/',
+  [
+    body('numero').trim().notEmpty().withMessage('Número requerido'),
+    body('descripcion').trim().notEmpty().withMessage('Descripción requerida'),
+    body('valor').isFloat({ gt: 0 }).withMessage('Valor debe ser un número positivo'),
+    body('estado').trim().notEmpty().withMessage('Estado requerido')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  if (!numero || !descripcion || !valor || !estado) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: numero, descripcion, valor, estado' });
-  }
+    const { numero, descripcion, valor, estado } = req.body;
+    const numeroTrim = numero.trim();
+    const descripcionTrim = descripcion.trim();
+    const valorNum = parseFloat(valor);
+    const estadoTrim = estado.trim();
 
-  try {
-    const [result] = await pool.query(
-      'INSERT INTO tipo_multa (numero, descripcion, valor, estado) VALUES (?, ?, ?, ?)',
-      [numero, descripcion, valor, estado]
-    );
-    res.status(201).json({ message: 'Tipo de multa creado exitosamente', id: result.insertId });
-  } catch (error) {
-    console.error('Error al crear tipo de multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    try {
+      const [result] = await pool.query(
+        'INSERT INTO tipo_multa (numero, descripcion, valor, estado) VALUES (?, ?, ?, ?)',
+        [numeroTrim, descripcionTrim, valorNum, estadoTrim]
+      );
+      res.status(201).json({ message: 'Tipo de multa creado exitosamente', id: result.insertId });
+    } catch (error) {
+      console.error('Error al crear tipo de multa:', error);
+      next(error);
+    }
   }
-});
+);
 
 // PUT /tipos_multa/:id (actualizar un tipo de multa - solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {

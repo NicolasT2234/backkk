@@ -10,10 +10,14 @@ function Alquiler() {
 
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.error("Logout failed", err);
+    } finally {
+      navigate("/");
+    }
   };
 
   const [formData, setFormData] = useState({

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -23,14 +24,14 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
        FROM usuario u
        JOIN rol_usuario ru ON u.id = ru.id_user
        JOIN rol r ON ru.id_rol = r.id
-       LEFT JOIN user_data ud ON u.id = ud.id_usuario
-       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
+       INNER JOIN user_data ud ON u.id = ud.id_usuario
+       INNER JOIN tipo_documento td ON ud.id_tipo_documento = td.id
        ORDER BY u.id`
     );
     res.json(usuarios);
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -48,8 +49,8 @@ router.get('/me', verificarToken, async (req, res) => {
        FROM usuario u
        JOIN rol_usuario ru ON u.id = ru.id_user
        JOIN rol r ON ru.id_rol = r.id
-       LEFT JOIN user_data ud ON u.id = ud.id_usuario
-       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
+       INNER JOIN user_data ud ON u.id = ud.id_usuario
+       INNER JOIN tipo_documento td ON ud.id_tipo_documento = td.id
        WHERE u.id = ?`,
       [req.usuario.id]
     );
@@ -63,7 +64,7 @@ router.get('/me', verificarToken, async (req, res) => {
     res.json(usuarios[0]);
   } catch (error) {
     console.error('Error al obtener datos del usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -81,8 +82,8 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
        FROM usuario u
        JOIN rol_usuario ru ON u.id = ru.id_user
        JOIN rol r ON ru.id_rol = r.id
-       LEFT JOIN user_data ud ON u.id = ud.id_usuario
-       LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
+       INNER JOIN user_data ud ON u.id = ud.id_usuario
+       INNER JOIN tipo_documento td ON ud.id_tipo_documento = td.id
        WHERE u.id = ?`,
       [id]
     );
@@ -94,12 +95,25 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     res.json(usuarios[0]);
   } catch (error) {
     console.error('Error al obtener usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // PUT /usuarios/:id (solo administrar)
-router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+router.put('/:id',
+  [
+    body('email').optional().trim().isEmail().normalizeEmail().withMessage('Email válido'),
+    body('nombre').optional().trim().notEmpty().withMessage('Nombre no puede estar vacío'),
+    body('apellido').optional().trim().notEmpty().withMessage('Apellido no puede estar vacío'),
+    body('tipoDocumento').optional().trim().notEmpty().withMessage('Tipo de documento no puede estar vacío'),
+    body('numeroDocumento').optional().trim().notEmpty().withMessage('Número de documento no puede estar vacío')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
@@ -156,6 +170,12 @@ router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     res.json({ message: 'Usuario actualizado exitosamente' });
   } catch (error) {
     await connection.rollback();
+    // Handle specific known errors with appropriate status codes
+    if (error.message === 'Tipo de documento no encontrado' ||
+        error.message === 'Usuario data no encontrada' ||
+        error.message === 'Administrador no encontrado para este usuario') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error al actualizar usuario:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
@@ -182,7 +202,7 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
   } catch (error) {
     await connection.rollback();
     console.error('Error al eliminar usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   } finally {
     connection.release();
   }

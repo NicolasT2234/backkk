@@ -333,6 +333,7 @@ html, body, #root {
 }
 
 
+
 /* Global action buttons styling (match alquiler-admin) */
 .acciones-cell {
     display: flex;
@@ -347,11 +348,11 @@ html, body, #root {
     border: none !important;
     color: #12321a !important;
     font-weight: 700 !important;
-    font-size: 0.82rem !important;
-    padding: 0.4rem 0.8rem !important;
-    border-radius: 0.5rem !important;
-    box-shadow: none !important;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+  font-size: 0.82rem !important;
+  padding: 0.4rem 0.8rem !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .acciones-cell .btn-aprobar:hover,
@@ -359,7 +360,7 @@ html, body, #root {
 .acciones-cell button.btn-aprobar:hover {
     background-color: #5aa860 !important;
     transform: translateY(-1px) !important;
-    box-shadow: none !important;
+  box-shadow: none !important;
 }
 
 .acciones-cell .btn-rechazar,
@@ -368,12 +369,12 @@ html, body, #root {
     background-color: #e6543f !important;
     border: none !important;
     color: #ffffff !important;
-    font-weight: 700 !important;
-    font-size: 0.82rem !important;
-    padding: 0.4rem 0.8rem !important;
-    border-radius: 0.5rem !important;
-    box-shadow: none !important;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  padding: 0.4rem 0.8rem !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .acciones-cell .btn-rechazar:hover,
@@ -381,7 +382,7 @@ html, body, #root {
 .acciones-cell button.btn-rechazar:hover {
     background-color: #cc4633 !important;
     transform: translateY(-1px) !important;
-    box-shadow: none !important;
+  box-shadow: none !important;
 }
 
 /* Also apply to Bootstrap variants if used */
@@ -394,6 +395,8 @@ div[class$='-page'] {
   display: flex;
   flex-direction: column;
 }
+
+
 
 /* Ajuste de la línea inferior de los tabs para que no quede pegada al texto */
 .custom-tabs {
@@ -408,4 +411,12 @@ div[class$='-page'] {
 
 .custom-tabs .nav-link.active {
     border-bottom: 3px solid #F47820;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
 }

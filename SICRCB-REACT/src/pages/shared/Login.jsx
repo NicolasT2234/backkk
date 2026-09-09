@@ -1,12 +1,15 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
+import { useContext } from "react"
+import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
 
 import "../../assets/css/styles.css"
 
 function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()   // ← MOVER AQUÍ
   const [correo, setCorreo] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -16,9 +19,7 @@ function Login() {
     setError("")
     try {
       const res = await api.post("/auth/login", { email: correo, contraseña: password })
-      localStorage.setItem("token", res.data.token)
-      localStorage.setItem("user", JSON.stringify(res.data.user))
-      // Determine redirect based on role
+      login(res.data.user)   // ← solo usar la función aquí, no declararla
       const userRole = res.data.user?.rol?.toLowerCase() || ''
       const isAdmin = userRole === 'administrador'
       navigate(isAdmin ? "/dashboard" : "/residente-dashboard")

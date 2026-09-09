@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import "../assets/css/styles.css"
 import NavbarApp from "../components/NavbarApp.jsx"
 import api from "../services/api"
+import { useAuth } from "../context/AuthContext"
 
 function Perfil() {
   const navigate = useNavigate()
@@ -35,26 +36,9 @@ function Perfil() {
           celular: userData.celular || "",
           contraseña: ""  // Don't pre-fill password
         })
-        // Also update localStorage with fresh data
-        localStorage.setItem("user", JSON.stringify(userData))
       } catch (err) {
         console.error("Error fetching user data:", err)
         setError("No se pudo cargar la información del usuario")
-        // Fallback to localStorage
-        const userFromStorage = localStorage.getItem("user")
-        if (userFromStorage) {
-          const userData = JSON.parse(userFromStorage)
-          setUsuario(userData)
-          setFormData({
-            nombres: userData.nombres || "",
-            apellidos: userData.apellidos || "",
-            email: userData.email || "",
-            numeroDocumento: userData.numeroDocumento || "",
-            tipoDocumento: userData.tipoDocumento || "",
-            celular: userData.celular || "",
-            contraseña: ""  // Don't pre-fill password
-          })
-        }
       } finally {
         setLoading(false)
       }
@@ -68,10 +52,14 @@ function Perfil() {
     setFormData({ ...formData, [name]: value })
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    navigate("/")
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout")
+    } catch (err) {
+      console.error("Logout failed", err)
+    } finally {
+      navigate("/")
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -101,7 +89,6 @@ function Perfil() {
       const response = await api.put(`/usuarios/me`, payload)
       const updatedUser = { ...usuario, ...response.data }
       setUsuario(updatedUser)
-      localStorage.setItem("user", JSON.stringify(updatedUser))
       setIsEditing(false)
       setError(null)
       alert("Perfil actualizado correctamente")

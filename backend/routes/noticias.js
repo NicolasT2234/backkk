@@ -3,6 +3,7 @@ const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
 const multer = require('multer');
 const path = require('path');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
     res.json(noticias.map(mapNoticia));
   } catch (error) {
     console.error('Error al obtener noticias:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -58,7 +59,7 @@ router.get('/destacadas', async (req, res) => {
     res.json(noticias.map(mapNoticia));
   } catch (error) {
     console.error('Error al obtener noticias destacadas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.get('/', verificarToken, async (req, res) => {
     res.json(sillas);
   } catch (error) {
     console.error('Error al obtener sillas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -33,29 +34,36 @@ router.get('/:id', verificarToken, async (req, res) => {
     res.json(sillas[0]);
   } catch (error) {
     console.error('Error al obtener silla:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /sillas (solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { numero, estado } = req.body;
+router.post('/',
+  [
+    body('numero').trim().notEmpty().withMessage('Número de silla requerido'),
+    body('estado').optional().trim().notEmpty().withMessage('Estado no puede estar vacío si se proporciona')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  if (!numero) {
-    return res.status(400).json({ error: 'Número de silla requerido' });
-  }
+    const { numero, estado } = req.body;
 
-  try {
-    const [result] = await pool.query(
-      'INSERT INTO silla (numero, estado) VALUES (?, ?)',
-      [numero, estado || 'Disponible']
-    );
-    res.status(201).json({ message: 'Silla creada exitosamente', id: result.insertId });
-  } catch (error) {
-    console.error('Error al crear silla:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    try {
+      const [result] = await pool.query(
+        'INSERT INTO silla (numero, estado) VALUES (?, ?)',
+        [numero, estado || 'Disponible']
+      );
+      res.status(201).json({ message: 'Silla creada exitosamente', id: result.insertId });
+    } catch (error) {
+      console.error('Error al crear silla:', error);
+      next(error);
+    }
   }
-});
+);
 
 // PUT /sillas/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {

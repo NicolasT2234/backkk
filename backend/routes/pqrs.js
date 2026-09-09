@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
     res.json(pqrs);
   } catch (error) {
     console.error('Error al obtener PQRs:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -51,17 +52,24 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     res.json(pqrs[0]);
   } catch (error) {
     console.error('Error al obtener PQR:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /pqrs (cualquier usuario autenticado puede crear su propia PQR)
-router.post('/', verificarToken, async (req, res) => {
-  const { descripcion, tipo, idApartamento } = req.body;
+router.post('/',
+  [
+    body('descripcion').trim().notEmpty().withMessage('Descripción requerida'),
+    body('tipo').trim().notEmpty().withMessage('Tipo requerido'),
+    body('idApartamento').isInt({ gt: 0 }).withMessage('ID de apartamento válido requerido')
+  ],
+  verificarToken, async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  if (!descripcion || !tipo || !idApartamento) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: descripcion, tipo, idApartamento' });
-  }
+    const { descripcion, tipo, idApartamento } = req.body;
 
   const idUsuario = req.usuario.id;
   const connection = await pool.getConnection();
@@ -97,14 +105,20 @@ router.post('/', verificarToken, async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Error al crear PQR:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   } finally {
     connection.release();
   }
 });
 
 // PUT /pqrs/:id (solo administradores)
-router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+router.put('/:id',
+  [
+    body('descripcion').optional().trim().notEmpty().withMessage('Descripción no puede estar vacía'),
+    body('estado').optional().trim().notEmpty().withMessage('Estado no puede estar vacío'),
+    body('tipo').optional().trim().notEmpty().withMessage('Tipo no puede estar vacío')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res) => {
   const { descripcion, estado, tipo } = req.body;
   const { id } = req.params;
 

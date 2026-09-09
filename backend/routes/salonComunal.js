@@ -1,11 +1,12 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
 // GET /salon-comunal (solo administradores para escritura, lectura pública o filtro)
-router.get('/', verificarToken, async (req, res) => {
+router.get('/', verificarToken, async (req, res, next) => {
   try {
     const [salones] = await pool.query(
       'SELECT id, nombre, descripcion, capacidad, costo_hora FROM salon_comunal ORDER BY nombre'
@@ -13,12 +14,12 @@ router.get('/', verificarToken, async (req, res) => {
     res.json(salones);
   } catch (error) {
     console.error('Error al obtener salones comunales:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // GET /salon-comunal/:id
-router.get('/:id', verificarToken, async (req, res) => {
+router.get('/:id', verificarToken, async (req, res, next) => {
   try {
     const { id } = req.params;
     const [salones] = await pool.query(
@@ -33,12 +34,12 @@ router.get('/:id', verificarToken, async (req, res) => {
     res.json(salones[0]);
   } catch (error) {
     console.error('Error al obtener salón comunal:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /salon-comunal (solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
+router.post('/', verificarToken, verificarRol('Administrador'), async (req, res, next) => {
   const { nombre, descripcion, capacidad, costoHora } = req.body;
 
   if (!nombre || !descripcion || !capacidad || !costoHora) {
@@ -53,74 +54,94 @@ router.post('/', verificarToken, verificarRol('Administrador'), async (req, res)
     res.status(201).json({ message: 'Salón comunal creado exitosamente', id: result.insertId });
   } catch (error) {
     console.error('Error al crear salón comunal:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // PUT /salon-comunal/:id (solo administradores)
-router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, capacidad, costoHora } = req.body;
-  const { id } = req.params;
-
-  if (!nombre && !descripcion && !capacidad && costoHora === undefined) {
-    return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
-  }
-
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    const updates = [];
-    const values = [];
-
-    if (nombre !== undefined) {
-      updates.push('nombre = ?');
-      values.push(nombre);
-    }
-    if (descripcion !== undefined) {
-      updates.push('descripcion = ?');
-      values.push(descripcion);
-    }
-    if (capacidad !== undefined) {
-      updates.push('capacidad = ?');
-      values.push(capacidad);
-    }
-    if (costoHora !== undefined) {
-      updates.push('costo_hora = ?');
-      values.push(costoHora);
+router.put('/:id',
+  [
+    body('nombre').optional().trim().notEmpty().withMessage('Nombre no puede estar vacío si se proporciona'),
+    body('descripcion').optional().trim().notEmpty().withMessage('Descripción no puede estar vacío si se proporciona'),
+    body('capacidad').optional().isInt({ gt: 0 }).withMessage('Capacidad debe ser un entero positivo si se proporciona'),
+    body('costoHora').optional().isFloat({ gt: 0 }).withMessage('Costo hora debe ser un número positivo si se proporciona')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    if (updates.length === 0) {
+    const { nombre, descripcion, capacidad, costoHora } = req.body;
+    const { id } = req.params;
+
+    // Check that at least one field is provided
+    if (!nombre && !descripcion && !capacidad && costoHora === undefined) {
+      return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
+    }
+
+    // Trim string fields and parse numbers
+    const nombreTrim = nombre !== undefined ? nombre.trim() : undefined;
+    const descripcionTrim = descripcion !== undefined ? descripcion.trim() : undefined;
+    const capacidadNum = capacidad !== undefined ? parseInt(capacidad, 10) : undefined;
+    const costoHoraNum = costoHora !== undefined ? parseFloat(costoHora) : undefined;
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const updates = [];
+      const values = [];
+
+      if (nombreTrim !== undefined) {
+        updates.push('nombre = ?');
+        values.push(nombreTrim);
+      }
+      if (descripcionTrim !== undefined) {
+        updates.push('descripcion = ?');
+        values.push(descripcionTrim);
+      }
+      if (capacidadNum !== undefined) {
+        updates.push('capacidad = ?');
+        values.push(capacidadNum);
+      }
+      if (costoHoraNum !== undefined) {
+        updates.push('costo_hora = ?');
+        values.push(costoHoraNum);
+      }
+
+      if (updates.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'No hay campos para actualizar' });
+      }
+
+      values.push(id);
+      await connection.query(
+        `UPDATE salon_comunal SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await connection.commit();
+      res.json({ message: 'Salón comunal actualizado exitosamente' );
+    } catch (error) {
       await connection.rollback();
-      return res.status(400).json({ error: 'No hay campos para actualizar' });
+      console.error('Error al actualizar salón comunal:', error);
+      next(error);
+    } finally {
+      connection.release();
     }
-
-    values.push(id);
-    await connection.query(
-      `UPDATE salon_comunal SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    await connection.commit();
-    res.json({ message: 'Salón comunal actualizado exitosamente' });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error al actualizar salón comunal:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  } finally {
-    connection.release();
   }
-});
+);
 
 // DELETE /salon-comunal/:id (solo administradores)
-router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
+router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req, res, next) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM salon_comunal WHERE id = ?', [id]);
     res.json({ message: 'Salón comunal eliminado exitosamente' });
   } catch (error) {
     console.error('Error al eliminar salón comunal:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 

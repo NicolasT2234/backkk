@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.get('/', verificarToken, async (req, res) => {
     res.json(apartamentos);
   } catch (error) {
     console.error('Error al obtener apartamentos:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -73,29 +74,37 @@ router.get('/:id', verificarToken, async (req, res) => {
     res.json(apartamentos[0]);
   } catch (error) {
     console.error('Error al obtener apartamento:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /apartamentos (solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { numero, estado, idInterior } = req.body;
+router.post('/',
+  [
+    body('numero').trim().notEmpty().withMessage('Número requerido'),
+    body('estado').trim().notEmpty().withMessage('Estado requerido'),
+    body('idInterior').isInt({ gt: 0 }).withMessage('ID de interior válido requerido')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  if (!numero || !estado || !idInterior) {
-    return res.status(400).json({ error: 'Número, estado y idInterior requeridos' });
-  }
+    const { numero, estado, idInterior } = req.body;
 
-  try {
-    const [result] = await pool.query(
-      'INSERT INTO apartamento (numero, estado, id_interior) VALUES (?, ?, ?)',
-      [numero, estado, idInterior]
-    );
-    res.status(201).json({ message: 'Apartamento creado exitosamente', id: result.insertId });
-  } catch (error) {
-    console.error('Error al crear apartamento:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    try {
+      const [result] = await pool.query(
+        'INSERT INTO apartamento (numero, estado, id_interior) VALUES (?, ?, ?)',
+        [numero, estado, idInterior]
+      );
+      res.status(201).json({ message: 'Apartamento creado exitosamente', id: result.insertId });
+    } catch (error) {
+      console.error('Error al crear apartamento:', error);
+      next(error);
+    }
   }
-});
+);
 
 // PUT /apartamentos/:id (solo administradores)
 router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {

@@ -4,23 +4,11 @@ import api from "../../services/api"
 import "../../assets/css/styles.css"
 import "../../assets/css/dashboard.css"
 import NavbarApp from "../../components/NavbarApp.jsx"
-
-function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-    }).join(''))
-    return JSON.parse(jsonPayload)
-  } catch (e) {
-    return null
-  }
-}
+import { useAuth } from "../../context/AuthContext"
 
 function ResidenteDashboard() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
+  const { user: authUser, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -31,44 +19,36 @@ function ResidenteDashboard() {
   const [latestNoticias, setLatestNoticias] = useState([])
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userStr = localStorage.getItem('user')
+    // If auth is still loading, we keep loading true
+    if (authLoading) {
+      setLoading(true)
+      return
+    }
 
-    if (token && userStr) {
-      try {
-        const parsedUser = JSON.parse(userStr)
-        setUser(parsedUser)
-      } catch (e) {
-        console.error("Error parsing user from localStorage", e)
-        setError("Error al cargar datos de usuario")
-        navigate("/login")
-        return
-      }
-    } else {
+    // If no user, redirect to login
+    if (!authUser) {
       navigate("/login")
       return
     }
 
-    // Role check: only allow USER role to access this dashboard
-    if (user && user.role) {
-      const role = user.role.toLowerCase()
-      if (role !== 'user') {
-        // Redirect to admin dashboard if not a regular user
-        navigate("/dashboard")
-        return
-      }
+    // Role check: only allow 'propietario' role to access this dashboard
+    const userRole = authUser.rol?.toLowerCase() || ''
+    if (userRole !== 'propietario') {
+      // Redirect to admin dashboard if not a regular user (propietario)
+      navigate("/dashboard")
+      return
     }
 
     // Fetch dashboard data if we have user
-    if (user && user.id) {
-      const userId = user.id
+    if (authUser && authUser.id) {
+      const userId = authUser.id
 
       // Fetch multas count (then filter locally)
       api.get(`/multas/mis-multas`)
         .then(res => {
           const multas = Array.isArray(res.data) ? res.data : []
-          setPendingMultas(multas.filter(m => m.estado === 'pendiente').length)
-          setPaidMultas(multas.filter(m => m.estado === 'pagado').length)
+          setPendingMultas(multas.filter(m => m.estado === 'Pendiente').length)
+          setPaidMultas(multas.filter(m => m.estado === 'Resuelta').length) // Assuming 'Resuelta' is paid
         })
         .catch(err => {
           console.error("Error fetching multas:", err)
@@ -97,7 +77,7 @@ function ResidenteDashboard() {
     }
 
     setLoading(false)
-  }, [user, navigate])
+  }, [authUser, authLoading, navigate])
 
   if (loading) {
     return <div className="dashboard-page">Cargando panel de residente...</div>
@@ -115,10 +95,14 @@ function ResidenteDashboard() {
     )
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    navigate("/")
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout")
+    } catch (err) {
+      console.error("Logout failed", err)
+    } finally {
+      navigate("/")
+    }
   }
 
   return (
@@ -129,7 +113,7 @@ function ResidenteDashboard() {
       </div>
       <div className="subtitulo">
         <div className="subtitulo-banda">
-          Bienvenido, {user?.nombre || user?.email || 'Residente'}
+          Bienvenido, {authUser?.nombre || authUser?.email || 'Residente'}
         </div>
       </div>
 

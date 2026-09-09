@@ -14,29 +14,22 @@ import ResidenteDashboard from "./pages/residente/ResidenteDashboard.jsx"
 import AlquilerAdmin from "./pages/admin/Alquiler-admin.jsx"
 import MultaResidente from "./pages/residente/Multa-Residente.jsx"
 import NoticiasResi from "./pages/residente/Noticias_resi.jsx"
+import { useAuth } from "./context/AuthContext"
 
 function RutaPrivada({ children, rolesPermitidos = [] }) {
-  const token = localStorage.getItem("token")
-  const userStr = localStorage.getItem("user")
+  const { user, loading } = useAuth()
 
-  if (!token) {
-    return <Navigate to="/login" />
-  }
-
-  if (rolesPermitidos.length === 0) {
-    return children
-  }
-
-  let user = null
-  try {
-    user = userStr ? JSON.parse(userStr) : null
-  } catch (e) {
-    console.error("Error parsing user from localStorage", e)
+  if (loading) {
+    // While checking auth, treat as unauthenticated to avoid showing protected content
     return <Navigate to="/login" />
   }
 
   if (!user) {
     return <Navigate to="/login" />
+  }
+
+  if (rolesPermitidos.length === 0) {
+    return children
   }
 
   const userRole = user.rol?.toLowerCase() || ''
@@ -53,27 +46,19 @@ function RutaPrivada({ children, rolesPermitidos = [] }) {
   return children
 }
 
-function getUserRole() {
-  const userStr = localStorage.getItem("user")
-  try {
-    const user = userStr ? JSON.parse(userStr) : null
-    return user?.rol?.toLowerCase() || ''
-  } catch (e) {
-    console.error("Error parsing user from localStorage", e)
-    return ''
-  }
-}
-
 function MultasPorRol() {
-  return getUserRole() === 'administrador' ? <Multas /> : <MultaResidente />
+  const { user } = useAuth()
+  return user && user.rol?.toLowerCase() === 'administrador' ? <Multas /> : <MultaResidente />
 }
 
 function NoticiasPorRol() {
-  return getUserRole() === 'administrador' ? <Noticias /> : <NoticiasResi />
+  const { user } = useAuth()
+  return user && user.rol?.toLowerCase() === 'administrador' ? <Noticias /> : <NoticiasResi />
 }
 
 function AlquilerPorRol() {
-  return getUserRole() === 'administrador' ? <AlquilerAdmin /> : <Alquiler />
+  const { user } = useAuth()
+  return user && user.rol?.toLowerCase() === 'administrador' ? <AlquilerAdmin /> : <Alquiler />
 }
 
 function App() {

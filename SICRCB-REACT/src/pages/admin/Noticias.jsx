@@ -186,10 +186,14 @@ function Noticias() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.error("Logout failed", err);
+    } finally {
+      navigate("/");
+    }
   };
 
   // Helper to get ID from noticia object (supports different possible field names)

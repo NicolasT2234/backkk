@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, verificarRol } = require('../auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
     res.json(multas);
   } catch (error) {
     console.error('Error al obtener multas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -87,141 +88,173 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     res.json(multas[0]);
   } catch (error) {
     console.error('Error al obtener multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
 // POST /multas (solo administradores)
-router.post('/', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, id_tipo_multa, evidencia, idApartamento } = req.body;
-
-  if (!nombre || !descripcion || !id_tipo_multa || !evidencia || !idApartamento) {
-    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, descripcion, id_tipo_multa, evidencia, idApartamento' });
-  }
-
-  // Resolver id_administrador desde el usuario logueado
-  // req.usuario.id is the usuario.id from JWT
-  // Need to find the administrador id that corresponds to this usuario
-  let idAdministrador;
-  try {
-    const [userDataRows] = await pool.query(
-      'SELECT id FROM user_data WHERE id_usuario = ?',
-      [req.usuario.id]
-    );
-
-    if (userDataRows.length === 0) {
-      return res.status(400).json({ error: 'Usuario data no encontrada' });
+router.post('/',
+  [
+    body('nombre').trim().notEmpty().withMessage('Nombre requerido'),
+    body('descripcion').trim().notEmpty().withMessage('Descripción requerida'),
+    body('id_tipo_multa').isInt({ gt: 0 }).withMessage('ID de tipo de multa válido requerido'),
+    body('evidencia').trim().notEmpty().withMessage('Evidencia requerida'),
+    body('idApartamento').isInt({ gt: 0 }).withMessage('ID de apartamento válido requerido'),
+    body('estado').optional().isIn(['Pendiente','En proceso','Resuelta']).withMessage('Estado debe ser Pendiente, En proceso o Resuelta')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const userDataId = userDataRows[0].id;
-
-    const [adminRows] = await pool.query(
-      'SELECT id FROM administrador WHERE id_user_data = ?',
-      [userDataId]
-    );
-
-    if (adminRows.length === 0) {
-      return res.status(400).json({ error: 'Administrador no encontrado para este usuario' });
+    const { nombre, descripcion, id_tipo_multa, evidencia, idApartamento } = req.body;
+    const nombreTrim = nombre.trim();
+    const descripcionTrim = descripcion.trim();
+    const evidenciaTrim = evidencia.trim();
+    const idTipoMulta = parseInt(id_tipo_multa, 10);
+    const idApartamentoNum = parseInt(idApartamento, 10);
+    let estadoValor = 'Pendiente';
+    if (req.body.estado !== undefined) {
+      estadoValor = req.body.estado.trim();
     }
 
-    idAdministrador = adminRows[0].id;
-  } catch (error) {
-    console.error('Error al obtener administrador:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+    // Resolver id_administrador desde el usuario logueado
+    // req.usuario.id is the usuario.id from JWT
+    // Need to find the administrador id that corresponds to this usuario
+    let idAdministrador;
+    try {
+      const [userDataRows] = await pool.query(
+        'SELECT id FROM user_data WHERE id_usuario = ?',
+        [req.usuario.id]
+      );
 
-  // Validar estado si se proporciona (valor por defecto: 'Pendiente')
-  let estadoValor = 'Pendiente';
-  if (req.body.estado !== undefined) {
-    if (!['Pendiente','En proceso','Resuelta'].includes(req.body.estado)) {
-      return res.status(400).json({ error: 'Estado inválido' });
+      if (userDataRows.length === 0) {
+        return res.status(400).json({ error: 'Usuario data no encontrada' });
+      }
+
+      const userDataId = userDataRows[0].id;
+
+      const [adminRows] = await pool.query(
+        'SELECT id FROM administrador WHERE id_user_data = ?',
+        [userDataId]
+      );
+
+      if (adminRows.length === 0) {
+        return res.status(400).json({ error: 'Administrador no encontrado para este usuario' });
+      }
+
+      idAdministrador = adminRows[0].id;
+    } catch (error) {
+      console.error('Error al obtener administrador:', error);
+      return next(error);
     }
-    estadoValor = req.body.estado;
-  }
 
-  try {
-    const [result] = await pool.query(
-      'INSERT INTO multa (numero, nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, id_apartamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [Date.now(), nombre, descripcion, id_tipo_multa, idAdministrador, evidencia, estadoValor, idApartamento]
-    );
-    res.status(201).json({ message: 'Multa creada exitosamente', id: result.insertId });
-  } catch (error) {
-    console.error('Error al crear multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    try {
+      const [result] = await pool.query(
+        'INSERT INTO multa (numero, nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, id_apartamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [Date.now(), nombreTrim, descripcionTrim, idTipoMulta, idAdministrador, evidenciaTrim, estadoValor, idApartamentoNum]
+      );
+      res.status(201).json({ message: 'Multa creada exitosamente', id: result.insertId });
+    } catch (error) {
+      console.error('Error al crear multa:', error);
+      next(error);
+    }
   }
-});
+);
 
 // PUT /multas/:id (solo administradores)
-router.put('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
-  const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, idApartamento } = req.body;
-  const { id } = req.params;
-
-  if (!nombre && !descripcion && !id_tipo_multa && !id_administrador && !evidencia && !estado && !idApartamento) {
-    return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
-  }
-
-  // Validar estado si se proporciona
-  if (estado !== undefined && !['Pendiente','En proceso','Resuelta'].includes(estado)) {
-    return res.status(400).json({ error: 'Estado inválido' });
-  }
-
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    const updates = [];
-    const values = [];
-
-    if (nombre !== undefined) {
-      updates.push('nombre = ?');
-      values.push(nombre);
-    }
-    if (descripcion !== undefined) {
-      updates.push('descripcion = ?');
-      values.push(descripcion);
-    }
-    if (id_tipo_multa !== undefined) {
-      updates.push('id_tipo_multa = ?');
-      values.push(id_tipo_multa);
-    }
-    if (id_administrador !== undefined) {
-      updates.push('id_administrador = ?');
-      values.push(id_administrador);
-    }
-    if (evidencia !== undefined) {
-      updates.push('evidencia = ?');
-      values.push(evidencia);
-    }
-    if (idApartamento !== undefined) {
-      updates.push('id_apartamento = ?');
-      values.push(idApartamento);
-    }
-    if (estado !== undefined) {
-      updates.push('estado = ?');
-      values.push(estado);
+router.put('/:id',
+  [
+    body('nombre').optional().trim().notEmpty().withMessage('Nombre no puede estar vacío si se proporciona'),
+    body('descripcion').optional().trim().notEmpty().withMessage('Descripción no puede estar vacía si se proporciona'),
+    body('id_tipo_multa').optional().isInt({ gt: 0 }).withMessage('ID de tipo de multa debe ser un entero positivo si se proporciona'),
+    body('id_administrador').optional().isInt({ gt: 0 }).withMessage('ID de administrador debe ser un entero positivo si se proporciona'),
+    body('evidencia').optional().trim().notEmpty().withMessage('Evidencia no puede estar vacía si se proporciona'),
+    body('estado').optional().isIn(['Pendiente','En proceso','Resuelta']).withMessage('Estado debe ser Pendiente, En proceso o Resuelta si se proporciona'),
+    body('idApartamento').optional().isInt({ gt: 0 }).withMessage('ID de apartamento debe ser un entero positivo si se proporciona')
+  ],
+  verificarToken, verificarRol('Administrador'), async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    if (updates.length === 0) {
+    const { nombre, descripcion, id_tipo_multa, id_administrador, evidencia, estado, idApartamento } = req.body;
+    const { id } = req.params;
+
+    // Check that at least one field is provided
+    if (!nombre && !descripcion && !id_tipo_multa && !id_administrador && !evidencia && !estado && !idApartamento) {
+      return res.status(400).json({ error: 'Al menos un campo debe proporcionarse' });
+    }
+
+    // Trim string fields and parse integers
+    const nombreTrim = nombre !== undefined ? nombre.trim() : undefined;
+    const descripcionTrim = descripcion !== undefined ? descripcion.trim() : undefined;
+    const evidenciaTrim = evidencia !== undefined ? evidencia.trim() : undefined;
+    const idTipoMulta = id_tipo_multa !== undefined ? parseInt(id_tipo_multa, 10) : undefined;
+    const idAdministradorNum = id_administrador !== undefined ? parseInt(id_administrador, 10) : undefined;
+    const idApartamentoNum = idApartamento !== undefined ? parseInt(idApartamento, 10) : undefined;
+    const estadoValor = estado !== undefined ? estado.trim() : undefined;
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const updates = [];
+      const values = [];
+
+      if (nombreTrim !== undefined) {
+        updates.push('nombre = ?');
+        values.push(nombreTrim);
+      }
+      if (descripcionTrim !== undefined) {
+        updates.push('descripcion = ?');
+        values.push(descripcionTrim);
+      }
+      if (idTipoMulta !== undefined) {
+        updates.push('id_tipo_multa = ?');
+        values.push(idTipoMulta);
+      }
+      if (idAdministradorNum !== undefined) {
+        updates.push('id_administrador = ?');
+        values.push(idAdministradorNum);
+      }
+      if (evidenciaTrim !== undefined) {
+        updates.push('evidencia = ?');
+        values.push(evidenciaTrim);
+      }
+      if (idApartamentoNum !== undefined) {
+        updates.push('id_apartamento = ?');
+        values.push(idApartamentoNum);
+      }
+      if (estadoValor !== undefined) {
+        updates.push('estado = ?');
+        values.push(estadoValor);
+      }
+
+      if (updates.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'No hay campos para actualizar' });
+      }
+
+      values.push(id);
+      await connection.query(
+        `UPDATE multa SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await connection.commit();
+      res.json({ message: 'Multa actualizada exitosamente' });
+    } catch (error) {
       await connection.rollback();
-      return res.status(400).json({ error: 'No hay campos para actualizar' });
+      console.error('Error al actualizar multa:', error);
+      next(error);
+    } finally {
+      connection.release();
     }
-
-    values.push(id);
-    await connection.query(
-      `UPDATE multa SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    await connection.commit();
-    res.json({ message: 'Multa actualizada exitosamente' });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error al actualizar multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  } finally {
-    connection.release();
   }
-});
+);
 
 // DELETE /multas/:id (solo administradores)
 router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {

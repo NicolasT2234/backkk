@@ -38,7 +38,7 @@ router.get('/estadisticas', verificarToken, verificarRol('Administrador'), async
     });
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
@@ -153,7 +153,7 @@ router.get('/residente', verificarToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener datos del residente:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 });
 
