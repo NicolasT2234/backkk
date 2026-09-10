@@ -9,7 +9,7 @@ const router = express.Router();
 // POST /login
 router.post('/login',
   [
-    body('email').trim().isEmail().normalizeEmail().withMessage('Email válido requerido'),
+    body('email').trim().isEmail().normalizeEmail({ gmail_remove_dots: false, gmail_remove_subaddress: false }).withMessage('Email válido requerido'),
     body('contraseña').trim().notEmpty().withMessage('Contraseña requerida')
   ],
   async (req, res, next) => {
@@ -21,13 +21,16 @@ router.post('/login',
     const { email, contraseña } = req.body;
 
     try {
+      // Usamos LEFT JOIN para que el Administrador (que no tiene fila en user_data) pueda iniciar sesión
       const [rows] = await pool.query(
-        `SELECT u.id, u.email, r.nombre as rol, ud.primer_nombre as nombre, ud.primer_apellido as apellido
-        FROM usuario u
-        JOIN rol_usuario ru ON u.id = ru.id_user
-        JOIN rol r ON ru.id_rol = r.id
-        INNER JOIN user_data ud ON u.id = ud.id_usuario
-        WHERE u.email = ? AND u.contraseña = SHA2(?, 256)`,
+        `SELECT u.id, u.email, r.nombre as rol, 
+                COALESCE(ud.primer_nombre, 'Administrador') as nombre, 
+                COALESCE(ud.primer_apellido, '') as apellido
+         FROM usuario u
+         JOIN rol_usuario ru ON u.id = ru.id_user
+         JOIN rol r ON ru.id_rol = r.id
+         LEFT JOIN user_data ud ON u.id = ud.id_usuario
+         WHERE u.email = ? AND u.contraseña = SHA2(?, 256)`,
         [email, contraseña]
       );
 
@@ -42,15 +45,15 @@ router.post('/login',
         { expiresIn: '24h' }
       );
 
-      // Set HTTP-only cookie
+      // Configuración de cookie HTTP-only
       res.cookie('sicrcb_token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // true in production
-        sameSite: 'lax', // appropriate for same-site or subdomain usage
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 horas
       });
 
-      // Return user data without token
+      // Retorno de datos de sesión sin exponer el token en el body
       res.json({
         user: {
           id: usuario.id,
@@ -70,14 +73,14 @@ router.post('/login',
 // POST /registro
 router.post('/registro',
   [
-    body('email').trim().isEmail().normalizeEmail().withMessage('Email válido requerido'),
+    body('email').trim().isEmail().normalizeEmail({ gmail_remove_dots: false, gmail_remove_subaddress: false }).withMessage('Email válido requerido'),
     body('contraseña').trim().isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('nombre').trim().notEmpty().withMessage('Nombre requerido'),
     body('apellido').trim().notEmpty().withMessage('Apellido requerido'),
     body('tipoDocumento').trim().notEmpty().withMessage('Tipo de documento requerido'),
     body('numeroDocumento').trim().notEmpty().withMessage('Número de documento requerido')
   ],
-  async (req, res) => {
+  async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -88,7 +91,6 @@ router.post('/registro',
       contraseña,
       nombre,
       apellido,
-      telefono,
       tipoDocumento,
       numeroDocumento
     } = req.body;
@@ -97,14 +99,14 @@ router.post('/registro',
     try {
       await connection.beginTransaction();
 
-      // Insertar usuario
+      // 1. Insertar usuario
       const [usuarioResult] = await connection.query(
         'INSERT INTO usuario (email, contraseña, estado) VALUES (?, SHA2(?, 256), ?)',
         [email, contraseña, 'Activo']
       );
       const idUsuario = usuarioResult.insertId;
 
-      // Obtener id_tipo_documento desde tabla tipo_documento usando nombre_documento
+      // 2. Obtener id_tipo_documento desde la sigla
       const [tipoResult] = await connection.query(
         'SELECT id FROM tipo_documento WHERE sigla = ?',
         [tipoDocumento]
@@ -114,14 +116,14 @@ router.post('/registro',
       }
       const idTipoDocumento = tipoResult[0].id;
 
-      // Insertar user_data
+      // 3. Insertar user_data
       const [userDataResult] = await connection.query(
         'INSERT INTO user_data (id_usuario, numero_documento, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, id_tipo_documento) VALUES (?, ?, ?, NULL, ?, NULL, ?)',
         [idUsuario, numeroDocumento, nombre, apellido, idTipoDocumento]
       );
       const idUserData = userDataResult.insertId;
 
-      // Obtener rol de Propietario
+      // 4. Obtener rol de Propietario
       const [rolResult] = await connection.query(
         'SELECT id FROM rol WHERE nombre = ? LIMIT 1',
         ['Propietario']
@@ -131,13 +133,13 @@ router.post('/registro',
         throw new Error('Rol Propietario no encontrado');
       }
 
-      // Asignar rol al usuario
+      // 5. Asignar rol al usuario
       await connection.query(
         'INSERT INTO rol_usuario (id_user, id_rol) VALUES (?, ?)',
         [idUsuario, rolResult[0].id]
       );
 
-      // Insertar propietario (sin apartamento: el admin lo asigna después)
+      // 6. Insertar propietario inicial (el administrador le asignará el apartamento posteriormente)
       await connection.query(
         'INSERT INTO propietario (id_user_data, estado) VALUES (?, ?)',
         [idUserData, 'Activo']
@@ -147,11 +149,8 @@ router.post('/registro',
       res.status(201).json({ message: 'Usuario registrado exitosamente' });
     } catch (error) {
       await connection.rollback();
-      // Handle specific known errors with appropriate status codes
       if (error.message === 'Tipo de documento no encontrado' ||
-          error.message === 'Rol Propietario no encontrado' ||
-          error.message === 'Usuario data no encontrada' ||
-          error.message === 'Administrador no encontrado para este usuario') {
+          error.message === 'Rol Propietario no encontrado') {
         return res.status(400).json({ error: error.message });
       }
       console.error('Error en registro:', error);

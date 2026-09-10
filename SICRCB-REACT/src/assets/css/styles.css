@@ -8,6 +8,9 @@
 
 
 
+
+
+
 .auth-page .titulo {
     margin: 0 auto;
     width: min(680px, 95%);
@@ -40,6 +43,9 @@
 
 
 
+
+
+
 .auth-page .campo {
     margin-bottom: 18px;
     text-align: left;
@@ -55,6 +61,9 @@
 
 
 
+
+
+
 .auth-page .campos-dobles {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -67,6 +76,9 @@
     transition: border-color 0.15s, box-shadow 0.15s;
     appearance: auto;
 }
+
+
+
 
 
 
@@ -137,6 +149,9 @@
     border-color: #F47820;
     box-shadow: 0 0 0 3px rgba(255, 154, 82, 0.15);
 }
+
+
+
 
 
 
@@ -334,6 +349,7 @@ html, body, #root {
 
 
 
+
 /* Global action buttons styling (match alquiler-admin) */
 .acciones-cell {
     display: flex;
@@ -398,6 +414,7 @@ div[class$='-page'] {
 
 
 
+
 /* Ajuste de la línea inferior de los tabs para que no quede pegada al texto */
 .custom-tabs {
     border-bottom: 1px solid #f2e4d7;
@@ -418,5 +435,54 @@ div[class$='-page'] {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+    }
+}
+
+/* NEW: 2-column grid layout for login form */
+.auth-page .formulario-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: min(680px, 95%);
+    margin: 0 auto;
+    background-color: #fff;
+    border: 1px solid #f2e4d7;
+    border-radius: 16px;
+    padding: 28px 36px 32px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Form columns */
+.auth-page .form-column {
+    padding: 0 1rem;
+}
+
+.auth-page .form-column-left {
+    border-right: 1px solid #f2e4d7;
+}
+
+.auth-page .form-column-right {
+    padding-left: 2rem;
+}
+
+/* Responsive design - stack columns on mobile */
+@media (max-width: 768px) {
+    .auth-page .formulario-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-page .form-column-left {
+        border-right: none;
+        border-bottom: 1px solid #f2e4d7;
+        padding-bottom: 2rem;
+    }
+
+    .auth-page .form-column-right {
+        padding-left: 0;
+        padding-top: 2rem;
+    }
+
+    .auth-page .form-column {
+        padding: 0;
     }
 }

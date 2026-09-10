@@ -1,171 +1,274 @@
-// src/pages/AlquilerAdmin.jsx
-import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import "../../assets/css/styles.css";
-import "../../assets/css/multas.css";
-import "../../assets/css/alquiler-admin.css";
-import api from "../../services/api";
-import Footer from "../../components/Footer";
-import NavbarApp from "../../components/NavbarApp";
-import { Badge, Spinner, Alert, Table, Button, Form } from "react-bootstrap";
+import React, { useState, useEffect, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
+import api from "../../services/api"
+import "../../assets/css/styles.css"
+import "../../assets/css/alquiler-admin.css"
+import NavbarApp from "../../components/NavbarApp.jsx"
+import Footer from "../../components/Footer.jsx"
+import {
+  CalendarDays,
+  Search,
+  Check,
+  X,
+  Clock,
+  Building,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  CalendarCheck
+} from "lucide-react"
 
-const ESTADOS = {
-    pendiente: { label: "Pendiente", bg: "warning" },
-    aprobada: { label: "Aprobada", bg: "success" },
-    rechazada: { label: "Rechazada", bg: "danger" },
-};
+function AlquilerAdmin() {
+  const navigate = useNavigate()
+  const [solicitudes, setSolicitudes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState("pendiente")
+  const [procesando, setProcesando] = useState(null)
+  const [busqueda, setBusqueda] = useState("")
 
-function EstadoBadge({ estado }) {
-    const info = ESTADOS[estado] || { label: estado, bg: "dark" };
-    return <Badge bg={info.bg}>{info.label}</Badge>;
-}
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    navigate("/login")
+  }
 
-function Iniciales({ nombre }) {
-    const iniciales = nombre?.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase();
-    return <span className="avatar-inicial">{iniciales || "?"}</span>;
-}
+  const normalizeSolicitudes = (payload) => {
+    if (Array.isArray(payload)) return payload
+    if (Array.isArray(payload?.data)) return payload.data
+    if (Array.isArray(payload?.solicitudes)) return payload.solicitudes
+    if (Array.isArray(payload?.reservas)) return payload.reservas
+    return []
+  }
 
-function diasEsperando(fecha) {
-    return Math.floor((Date.now() - new Date(fecha).getTime()) / (1000 * 60 * 60 * 24));
-}
+  const fetchSolicitudes = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get("/alquileres")
+      setSolicitudes(normalizeSolicitudes(res.data))
+    } catch (err) {
+      console.error("Error al cargar solicitudes:", err)
+      setError("No se pudieron cargar las solicitudes de alquiler.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
-const FILTROS = [
-    { key: "todas", label: "Total" },
-    { key: "pendiente", label: "Pendientes" },
-    { key: "aprobada", label: "Aprobadas" },
-    { key: "rechazada", label: "Rechazadas" },
-];
+  useEffect(() => {
+    fetchSolicitudes()
+  }, [])
 
-export default function AlquilerAdmin() {
-    const [solicitudes, setSolicitudes] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [tab, setTab] = useState("pendiente");
-    const [procesando, setProcesando] = useState(null);
-    const [busqueda, setBusqueda] = useState("");
+  const actualizarEstado = async (id, nuevoEstado) => {
+    try {
+      setProcesando(id)
+      await api.put(`/alquileres/${id}`, { estado: nuevoEstado })
+      setSolicitudes((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, estado: nuevoEstado } : s))
+      )
+    } catch (err) {
+      console.error("Error al actualizar estado:", err)
+    } finally {
+      setProcesando(null)
+    }
+  }
 
-    const handleLogout = () => navigate("/login");
+  const stats = useMemo(() => ({
+    todas: solicitudes.length,
+    pendiente: solicitudes.filter((s) => (s.estado || "").toLowerCase() === "pendiente").length,
+    aprobada: solicitudes.filter((s) => (s.estado || "").toLowerCase() === "aprobada").length,
+    rechazada: solicitudes.filter((s) => (s.estado || "").toLowerCase() === "rechazada").length,
+  }), [solicitudes])
 
-    const normalizeSolicitudes = (payload) => {
-        if (Array.isArray(payload)) return payload;
-        if (Array.isArray(payload.data)) return payload.data;
-        if (Array.isArray(payload.solicitudes)) return payload.solicitudes;
-        if (Array.isArray(payload.reservas)) return payload.reservas;
-        return [];
-    };
+  const solicitudesFiltradas = solicitudes
+    .filter((s) => (activeTab === "todas" ? true : (s.estado || "").toLowerCase() === activeTab))
+    .filter((s) => {
+      const q = busqueda.trim().toLowerCase()
+      if (!q) return true
+      const residente = (s.residente_nombre || "").toLowerCase()
+      const espacio = (s.espacio || "salón comunal").toLowerCase()
+      return residente.includes(q) || espacio.includes(q)
+    })
 
-    useEffect(() => {
-        const fetchSolicitudes = async () => {
-            try {
-                const res = await api.get("/alquileres");
-                setSolicitudes(normalizeSolicitudes(res.data));
-                setLoading(false);
-            } catch (err) {
-                console.error("Error al cargar solicitudes:", err);
-                setError("No se pudieron cargar las solicitudes de alquiler.");
-                setLoading(false);
-            }
-        };
-        fetchSolicitudes();
-    }, []);
+  return (
+    <div className="alquiler-page">
+      <NavbarApp onLogout={handleLogout} />
 
-    const actualizarEstado = async (id, nuevoEstado) => {
-        try {
-            setProcesando(id);
-            await api.put(`/alquileres/${id}`, { estado: nuevoEstado });
-            setSolicitudes((prev) => prev.map((s) => (s.id === id ? { ...s, estado: nuevoEstado } : s)));
-        } catch (err) {
-            console.error("Error al actualizar solicitud:", err);
-            setError("No se pudo actualizar el estado de la solicitud.");
-        } finally {
-            setProcesando(null);
-        }
-    };
+      <main className="alquiler-main-container">
+        {/* Banner Superior */}
+        <section className="sicrcb-alq-hero">
+          <div className="alq-hero-text">
+            <h1>
+              <span>Aprobación de Alquileres</span>
+              <CalendarCheck size={26} stroke="#FFD0A0" />
+            </h1>
+            <p>Control de disponibilidad y validación de pagos del Salón Comunal.</p>
+          </div>
+          <div className="alq-hero-badge">
+            <Clock size={16} stroke="#FFD0A0" />
+            <span>{stats.pendiente} Solicitudes por Revisar</span>
+          </div>
+        </section>
 
-    const stats = useMemo(() => ({
-        todas: solicitudes.length,
-        pendiente: solicitudes.filter((s) => s.estado === "pendiente").length,
-        aprobada: solicitudes.filter((s) => s.estado === "aprobada").length,
-        rechazada: solicitudes.filter((s) => s.estado === "rechazada").length,
-    }), [solicitudes]);
-
-    const handleSeleccionTab = (key) => { setTab(key); setBusqueda(""); };
-
-    const solicitudesFiltradas = solicitudes
-        .filter((s) => (tab === "todas" ? true : s.estado === tab))
-        .filter((s) => {
-            const q = busqueda.trim().toLowerCase();
-            if (!q) return true;
-            return ((s.residente_nombre || "").toLowerCase().includes(q) || (s.espacio || "").toLowerCase().includes(q));
-        });
-
-    const filtroActivo = FILTROS.find((f) => f.key === tab);
-
-    return (
-        <div className="multas-page alquiler-admin-page">
-            <NavbarApp onLogout={handleLogout} />
-            <div className="container py-4" style={{ flex: "1 0 auto" }}>
-                <h3 style={{ color: "rgb(140, 50, 0)" }} className="mb-4 fw-bold">Solicitudes de Alquiler</h3>
-
-                <div className="alquiler-stats-grid">
-                    {FILTROS.map((f) => (
-                        <button key={f.key} type="button" className={`alquiler-stat-card stat-${f.key} ${tab === f.key ? "activa" : ""}`} onClick={() => handleSeleccionTab(f.key)}>
-                            <span className="alquiler-stat-label">{f.label}</span>
-                        </button>
-                    ))}
-                </div>
-
-                <div className="alquiler-busqueda-row">
-                    <Form.Control type="text" placeholder={`Buscar en ${filtroActivo?.label.toLowerCase()} por residente o espacio...`} value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="alquiler-buscador" />
-                </div>
-
-                {loading && (
-                    <div className="text-center py-5"><Spinner animation="border" style={{ color: "rgb(140, 50, 0)" }} /></div>
-                )}
-
-                {error && <Alert variant="danger">{error}</Alert>}
-
-                {!loading && !error && (
-                    <div className="table-responsive rounded" style={{ border: "1px solid #FFD0A0" }}>
-                        <Table hover className="mb-0 align-middle">
-                            <thead style={{ backgroundColor: "#FFD0A0" }}>
-                                <tr><th>Residente</th><th>Espacio</th><th>Fecha</th><th>Estado</th><th className="text-end">Acciones</th></tr>
-                            </thead>
-                            <tbody>
-                                {solicitudesFiltradas.length === 0 ? (
-                                    <tr><td colSpan={5} className="text-center text-muted py-4">{busqueda ? "Ningún resultado coincide con tu búsqueda." : "No hay solicitudes registradas en esta categoría."}</td></tr>
-                                ) : (
-                                    solicitudesFiltradas.map((s) => {
-                                        const dias = diasEsperando(s.fecha);
-                                        return (
-                                            <tr key={s.id}>
-                                                <td><span className="residente-cell"><Iniciales nombre={s.residente_nombre} />{s.residente_nombre}</span></td>
-                                                <td>{s.espacio}</td>
-                                                <td>
-                                                    {new Date(s.fecha).toLocaleDateString("es-CO")}
-                                                    {s.estado === "pendiente" && dias >= 2 && <div className="dias-espera">{dias} días esperando</div>}
-                                                </td>
-                                                <td><EstadoBadge estado={s.estado} /></td>
-                                                <td className="text-end">
-                                                    {s.estado === "pendiente" ? (
-                                                        <div className="acciones-cell">
-                                                            <Button variant="light" size="sm" className="btn-aprobar" disabled={procesando === s.id} onClick={() => actualizarEstado(s.id, "aprobada")}>{procesando === s.id ? "..." : "Aprobar"}</Button>
-                                                            <Button variant="light" size="sm" className="btn-rechazar" disabled={procesando === s.id} onClick={() => actualizarEstado(s.id, "rechazada")}>{procesando === s.id ? "..." : "Rechazar"}</Button>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted small">Sin acciones</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </Table>
-                    </div>
-                )}
+        {/* KPIs y Filtros en Barra de Estado */}
+        <section className="sicrcb-alq-kpis">
+          <div
+            className={`alq-kpi-card ${activeTab === "todas" ? "active" : ""}`}
+            onClick={() => setActiveTab("todas")}
+          >
+            <div className="alq-kpi-icon">
+              <CalendarDays size={22} />
             </div>
-            <Footer />
+            <div className="alq-kpi-data">
+              <span className="alq-kpi-label">Total Solicitudes</span>
+              <span className="alq-kpi-val">{stats.todas}</span>
+            </div>
+          </div>
+
+          <div
+            className={`alq-kpi-card ${activeTab === "pendiente" ? "active" : ""}`}
+            onClick={() => setActiveTab("pendiente")}
+          >
+            <div className="alq-kpi-icon warning">
+              <Clock size={22} />
+            </div>
+            <div className="alq-kpi-data">
+              <span className="alq-kpi-label">Pendientes</span>
+              <span className="alq-kpi-val">{stats.pendiente}</span>
+            </div>
+          </div>
+
+          <div
+            className={`alq-kpi-card ${activeTab === "aprobada" ? "active" : ""}`}
+            onClick={() => setActiveTab("aprobada")}
+          >
+            <div className="alq-kpi-icon success">
+              <CheckCircle2 size={22} />
+            </div>
+            <div className="alq-kpi-data">
+              <span className="alq-kpi-label">Aprobadas</span>
+              <span className="alq-kpi-val">{stats.aprobada}</span>
+            </div>
+          </div>
+
+          <div
+            className={`alq-kpi-card ${activeTab === "rechazada" ? "active" : ""}`}
+            onClick={() => setActiveTab("rechazada")}
+          >
+            <div className="alq-kpi-icon danger">
+              <XCircle size={22} />
+            </div>
+            <div className="alq-kpi-data">
+              <span className="alq-kpi-label">Rechazadas</span>
+              <span className="alq-kpi-val">{stats.rechazada}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Tabla con Buscador Integrado */}
+        <div className="sicrcb-alq-table-card">
+          <div className="alq-toolbar">
+            <span style={{ fontWeight: "800", color: "#8C3200", fontSize: "1.05rem" }}>
+              Listado de Reservas ({activeTab.toUpperCase()})
+            </span>
+
+            <div className="alq-table-search">
+              <Search size={16} className="alq-search-icon" />
+              <input
+                type="text"
+                placeholder="Buscar por residente o espacio..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="sicrcb-table-responsive">
+            <table className="sicrcb-data-table">
+              <thead>
+                <tr>
+                  <th>Residente / Solicitante</th>
+                  <th>Espacio Requerido</th>
+                  <th>Fecha del Evento</th>
+                  <th>Estado</th>
+                  <th style={{ textAlign: "right" }}>Decisión</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center", padding: "3rem" }}>
+                      Cargando solicitudes de alquiler...
+                    </td>
+                  </tr>
+                ) : solicitudesFiltradas.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center", padding: "3rem", color: "#8C3200" }}>
+                      No hay solicitudes registradas en esta categoría.
+                    </td>
+                  </tr>
+                ) : (
+                  solicitudesFiltradas.map((s) => {
+                    const estado = (s.estado || "pendiente").toLowerCase()
+                    return (
+                      <tr key={s.id}>
+                        <td>
+                          <strong>{s.residente_nombre || "Copropietario"}</strong>
+                          <div style={{ fontSize: "0.78rem", color: "#735340" }}>
+                            {s.apartamento ? `Apto ${s.apartamento}` : "Residente registrado"}
+                          </div>
+                        </td>
+                        <td>{s.espacio || "Salón Comunal + 50 Sillas"}</td>
+                        <td>
+                          {s.fecha ? new Date(s.fecha).toLocaleDateString("es-CO") : "Fecha por definir"}
+                        </td>
+                        <td>
+                          <span className={`sicrcb-status-badge status-${estado}`}>
+                            {s.estado || "Pendiente"}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="alq-action-btns" style={{ justifyContent: "flex-end" }}>
+                            {estado === "pendiente" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn-alq-approve"
+                                  disabled={procesando === s.id}
+                                  onClick={() => actualizarEstado(s.id, "aprobada")}
+                                >
+                                  <Check size={14} />
+                                  <span>Aprobar</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-alq-reject"
+                                  disabled={procesando === s.id}
+                                  onClick={() => actualizarEstado(s.id, "rechazada")}
+                                >
+                                  <X size={14} />
+                                  <span>Rechazar</span>
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: "0.8rem", color: "#735340", fontStyle: "italic" }}>
+                                Tramitado
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-    );
+      </main>
+
+      <Footer style={{ marginTop: "auto" }} />
+    </div>
+  )
 }
+
+export default AlquilerAdmin

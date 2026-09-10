@@ -19,27 +19,42 @@ import { useAuth } from "./context/AuthContext"
 function RutaPrivada({ children, rolesPermitidos = [] }) {
   const { user, loading } = useAuth()
 
+  // 1. Mientras valida la sesión con el backend, esperar sin redirigir
   if (loading) {
-    // While checking auth, treat as unauthenticated to avoid showing protected content
-    return <Navigate to="/login" />
+    return (
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        backgroundColor: "#fff3e0",
+        color: "#8C3200",
+        fontFamily: "Verdana, Geneva, Tahoma, sans-serif"
+      }}>
+        <h3>Cargando sesión...</h3>
+      </div>
+    )
   }
 
+  // 2. Si terminó de cargar y no hay usuario autenticado, redirigir al login
   if (!user) {
-    return <Navigate to="/login" />
+    return <Navigate to="/login" replace />
   }
 
+  // 3. Si no se especificaron roles requeridos, permitir acceso
   if (rolesPermitidos.length === 0) {
     return children
   }
 
+  // 4. Validar rol del usuario
   const userRole = user.rol?.toLowerCase() || ''
   const hasPermission = rolesPermitidos.some(role => role.toLowerCase() === userRole)
 
   if (!hasPermission) {
     if (userRole === 'administrador') {
-      return <Navigate to="/dashboard" />
+      return <Navigate to="/dashboard" replace />
     } else {
-      return <Navigate to="/residente-dashboard" />
+      return <Navigate to="/residente-dashboard" replace />
     }
   }
 
@@ -69,7 +84,11 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Registro />} />
       <Route path="/recuperar" element={<Recuperar />} />
-      <Route path="/perfil" element={<Perfil />} />
+      <Route path="/perfil" element={
+        <RutaPrivada>
+          <Perfil />
+        </RutaPrivada>
+      } />
 
       {/* Rutas compartidas por rol - mismo path, componente distinto */}
       <Route path="/multas" element={

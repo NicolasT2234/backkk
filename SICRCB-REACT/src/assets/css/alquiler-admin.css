@@ -1,228 +1,411 @@
-.alquiler-stats-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+/* ==========================================================================
+   MÓDULO DE ALQUILER — VISTA ADMINISTRADOR (SICRCB CASA BLANCA)
+   ========================================================================== */
+
+:root {
+  --alq-bg: #fcf9f6;
+  --alq-card-bg: #ffffff;
+  --alq-primary: #8c3200;
+  --alq-primary-dark: #642300;
+  --alq-accent-orange: #f47820;
+  --alq-accent-peach: #ffd0a0;
+  --alq-peach-soft: rgba(255, 208, 160, 0.18);
+  --alq-border: rgba(140, 50, 0, 0.12);
+  --alq-text-dark: #2c1203;
+  --alq-text-muted: #735340;
+  --alq-shadow: 0 4px 20px -2px rgba(140, 50, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  --alq-shadow-hover: 0 10px 28px -4px rgba(140, 50, 0, 0.14);
 }
 
-.alquiler-stat-card {
-  background-color: rgb(140, 50, 0) !important;
-  border: none !important;
-  border-top: none !important;
-  border-radius: 14px;
-  padding: 1rem 1.8rem;
+.alquiler-page {
+  background-color: var(--alq-bg);
+  background-image: radial-gradient(#8c320015 0.75px, transparent 0.75px);
+  background-size: 20px 20px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 155px;
-  min-height: 72px;
-  text-align: center;
-  cursor: pointer;
-  font-family: inherit;
-  box-shadow: none !important;
-  outline: none;
-  transition: transform 0.2s ease, background-color 0.2s ease;
-}
-
-.alquiler-stat-card:hover {
-  transform: translateY(-3px);
-  background-color: rgb(155, 60, 5) !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.alquiler-stat-card:focus,
-.alquiler-stat-card:active {
-  border: none !important;
-  border-top: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.alquiler-stat-card.activa {
-  transform: translateY(-2px);
-  background-color: rgb(155, 60, 5) !important;
-  border: none !important;
-  border-top: none !important;
-  box-shadow: none !important;
-}
-
-.alquiler-stat-card.activa.stat-pendiente,
-.alquiler-stat-card.activa.stat-aprobada,
-.alquiler-stat-card.activa.stat-rechazada,
-.alquiler-stat-card.activa.stat-todas {
-  border: none !important;
-  border-top: none !important;
-}
-
-.alquiler-stat-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #ffffff;
-  opacity: 1;
+  color: var(--alq-text-dark);
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
+  padding: 0;
   margin: 0;
-  line-height: 1.2;
-  font-family: inherit;
-}
-
-.alquiler-busqueda-row {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.25rem;
-}
-
-.alquiler-buscador {
-  max-width: 340px;
   width: 100%;
-  border: 1px solid #e5cbb2;
+}
+
+.alquiler-main-container,
+.alquiler-container {
+  flex: 1 0 auto;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.25rem 1.75rem 3.5rem 1.75rem;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   BANNER PRINCIPAL (HERO)
+   ========================================================================== */
+.sicrcb-alq-hero {
+  background: linear-gradient(135deg, #8c3200 0%, #6e2600 100%);
   border-radius: 20px;
-  padding: 0.45rem 1rem;
-  font-size: 0.88rem;
+  padding: 2rem 2.25rem;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px -6px rgba(110, 38, 0, 0.45);
+  border: 1px solid rgba(255, 208, 160, 0.25);
+  position: relative;
+  overflow: hidden;
 }
 
-.alquiler-buscador:focus {
-  border-color: #F47820;
-  box-shadow: 0 0 0 3px rgba(244, 120, 32, 0.12);
+.alq-hero-text h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.35rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.residente-cell {
+.alq-hero-text p {
+  color: #ffd0a0;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.alq-hero-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 208, 160, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  color: #ffd0a0;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   MÉTRICAS / KPIS (ADMIN)
+   ========================================================================== */
+.sicrcb-alq-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.alq-kpi-card {
+  background: var(--alq-card-bg);
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  border: 1px solid var(--alq-border);
+  box-shadow: var(--alq-shadow);
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.alq-kpi-card:hover,
+.alq-kpi-card.active {
+  transform: translateY(-2px);
+  box-shadow: var(--alq-shadow-hover);
+  border-color: var(--alq-accent-orange);
+}
+
+.alq-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #8c3200 0%, #f47820 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alq-kpi-icon.warning { background: linear-gradient(135deg, #c2410c 0%, #f97316 100%); }
+.alq-kpi-icon.success { background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); }
+.alq-kpi-icon.danger  { background: linear-gradient(135deg, #9b1c1c 0%, #e02424 100%); }
+
+.alq-kpi-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.alq-kpi-label {
+  font-size: 0.78rem;
+  color: var(--alq-text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.alq-kpi-val {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--alq-primary);
+  line-height: 1.1;
+}
+
+/* ==========================================================================
+   TABLA ADMINISTRATIVA DE ALQUILERES
+   ========================================================================== */
+.sicrcb-alq-table-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid var(--alq-border);
+  box-shadow: var(--alq-shadow);
+  overflow: hidden;
+}
+
+.alq-toolbar {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid var(--alq-border);
+}
+
+.alq-table-search {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+}
+
+.alq-table-search input {
+  width: 100% !important;
+  height: 40px !important;
+  padding: 0 1rem 0 2.4rem !important;
+  border: 1.5px solid var(--alq-border) !important;
+  border-radius: 20px !important;
+  font-size: 0.88rem !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  background: #fdfaf7;
+  transition: all 0.2s ease;
+}
+
+.alq-table-search input:focus {
+  border-color: var(--alq-primary) !important;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(140, 50, 0, 0.12);
+}
+
+.alq-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--alq-primary);
+  opacity: 0.65;
+}
+
+/* Tabla base */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.alquiler-admin-table,
+.alquiler-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.alquiler-admin-table th,
+.alquiler-table th {
+  background-color: #faf6f2;
+  color: #555;
+  font-weight: 600;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid #ebdcd0;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+}
+
+.alquiler-admin-table td,
+.alquiler-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f3ece6;
+  vertical-align: middle;
+}
+
+.alquiler-admin-table tbody tr:hover,
+.alquiler-table tbody tr:hover {
+  background-color: #fdfbf9;
+}
+
+/* Celda de residente con avatar */
+.residente-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .avatar-inicial {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: #FFD0A0;
-  color: rgb(140, 50, 0);
-  font-size: 0.7rem;
-  font-weight: 700;
+  background-color: #ffd0a0;
+  color: #8c3200;
+  font-size: 0.75rem;
+  font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.dias-espera {
-  font-size: 0.72rem;
-  color: #cc4633;
-  font-weight: 600;
-  margin-top: 0.1rem;
+.residente-info-col {
+  display: flex;
+  flex-direction: column;
 }
 
+.residente-nombre {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.dias-espera {
+  font-size: 0.72rem;
+  color: #c2410c;
+  font-weight: 600;
+}
+
+/* Badges de estado */
+.status-pill {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pill.reservado,
+.status-pill.pendiente {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.status-pill.aprobado,
+.status-pill.activa {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.status-pill.cancelado,
+.status-pill.rechazada {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* Botones de acción rápida (Aprobar / Rechazar) */
+.alq-action-btns,
 .acciones-cell {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   justify-content: flex-end;
 }
 
-.acciones-cell .btn.btn-aprobar,
-.acciones-cell button.btn-aprobar {
-  background-color: #6fbf73 !important;
-  border: none !important;
-  color: #12321a !important;
-  font-weight: 700;
-  font-size: 0.82rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 0.5rem !important;
-  box-shadow: none !important;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-}
-
-.acciones-cell .btn.btn-aprobar:hover,
-.acciones-cell button.btn-aprobar:hover {
-  background-color: #5aa860 !important;
-  border: none !important;
-  transform: translateY(-1px);
-  box-shadow: none !important;
-}
-
-.acciones-cell .btn.btn-aprobar:focus,
-.acciones-cell button.btn-aprobar:focus,
-.acciones-cell .btn.btn-aprobar:active,
-.acciones-cell button.btn-aprobar:active {
-  background-color: #5aa860 !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.acciones-cell .btn.btn-rechazar,
-.acciones-cell button.btn-rechazar {
-  background-color: #e6543f !important;
-  border: none !important;
+.btn-alq-approve,
+.btn-aprobar {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  padding: 0.45rem 0.85rem !important;
+  background: #2e7d32 !important;
   color: #ffffff !important;
-  font-weight: 700;
-  font-size: 0.82rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 0.5rem !important;
-  box-shadow: none !important;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
 }
 
-.acciones-cell .btn.btn-rechazar:hover,
-.acciones-cell button.btn-rechazar:hover {
-  background-color: #cc4633 !important;
-  border: none !important;
+.btn-alq-approve:hover,
+.btn-aprobar:hover {
+  background: #1b5e20 !important;
   transform: translateY(-1px);
-  box-shadow: none !important;
 }
 
-.acciones-cell .btn.btn-rechazar:focus,
-.acciones-cell button.btn-rechazar:focus,
-.acciones-cell .btn.btn-rechazar:active,
-.acciones-cell button.btn-rechazar:active {
-  background-color: #cc4633 !important;
+.btn-alq-reject,
+.btn-rechazar {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  padding: 0.45rem 0.85rem !important;
+  background: #d32f2f !important;
+  color: #ffffff !important;
   border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
 }
 
-.acciones-cell .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  border: none !important;
-  box-shadow: none !important;
+.btn-alq-reject:hover,
+.btn-rechazar:hover {
+  background: #b71c1c !important;
+  transform: translateY(-1px);
 }
 
-@media (max-width: 768px) {
-  .alquiler-stat-card {
-    min-width: 140px;
-    flex: 1 1 140px;
+/* ==========================================================================
+   FOOTER (FULL-WIDTH)
+   ========================================================================== */
+.alquiler-page .app-footer,
+.app-footer {
+  width: 100% !important;
+  margin: 0 !important;
+  margin-top: auto !important;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.alquiler-page .app-footer .footer-inner,
+.app-footer .footer-inner {
+  border-radius: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  margin: 0 !important;
+}
+
+/* ==========================================================================
+   RESPONSIVIDAD
+   ========================================================================== */
+@media (max-width: 992px) {
+  .sicrcb-alq-kpis {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 576px) {
-  .alquiler-stats-grid {
-    gap: 0.75rem;
+@media (max-width: 600px) {
+  .alquiler-main-container,
+  .alquiler-container {
+    padding: 1.5rem 1rem 2.5rem 1rem;
   }
-
-  .alquiler-stat-card {
-    width: 100%;
-    min-width: 100%;
-    min-height: 65px;
-    padding: 0.85rem 1rem;
+  .sicrcb-alq-kpis {
+    grid-template-columns: 1fr;
   }
-
-  .alquiler-stat-label {
-    font-size: 0.95rem;
-  }
-
-  .acciones-cell {
-    flex-direction: column;
-  }
-
-  .alquiler-buscador {
-    max-width: 100%;
+  .alq-table-search input {
+    width: 100% !important;
   }
 }

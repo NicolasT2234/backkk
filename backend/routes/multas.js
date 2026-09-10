@@ -45,6 +45,41 @@ router.get('/', verificarToken, verificarRol('Administrador'), async (req, res) 
   }
 });
 
+// GET /mis-multas
+// IMPORTANTE: esta ruta debe ir ANTES de "/:id" porque si no, Express interpreta
+// "mis-multas" como si fuera un valor de :id y nunca llega hasta aquí.
+router.get('/mis-multas', verificarToken, async (req, res) => {
+  try {
+    const idUsuario = req.usuario.id;
+
+    const [multas] = await pool.query(
+      `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
+              b.nombre as bloque, ap.numero,
+              tm.valor as monto
+       FROM multa m
+       JOIN apartamento ap ON m.id_apartamento = ap.id
+       JOIN interior i ON ap.id_interior = i.id
+       JOIN bloque b ON i.id_bloque = b.id
+       JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
+       WHERE ap.id IN (
+         SELECT pga.id_apartamento
+         FROM propietario_gestion_apartamento pga
+         JOIN propietario pt ON pga.id_propietario = pt.id
+         JOIN user_data ud ON pt.id_user_data = ud.id
+         WHERE ud.id_usuario = ? AND pga.estado = 'Activo'
+       )
+       AND m.estado = ?
+       ORDER BY m.id DESC`,
+      [idUsuario, 'Pendiente']
+    );
+
+    res.json(multas);
+  } catch (error) {
+    console.error('Error al obtener mis multas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // GET /multas/:id (solo administradores)
 router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, res) => {
   try {
@@ -264,39 +299,6 @@ router.delete('/:id', verificarToken, verificarRol('Administrador'), async (req,
     res.json({ message: 'Multa eliminada exitosamente' });
   } catch (error) {
     console.error('Error al eliminar multa:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// GET /mis-multas
-router.get('/mis-multas', verificarToken, async (req, res) => {
-  try {
-    const idUsuario = req.usuario.id;
-
-    const [multas] = await pool.query(
-      `SELECT m.id, m.numero, m.nombre, m.descripcion, m.estado,
-              b.nombre as bloque, ap.numero,
-              tm.valor as monto
-       FROM multa m
-       JOIN apartamento ap ON m.id_apartamento = ap.id
-       JOIN interior i ON ap.id_interior = i.id
-       JOIN bloque b ON i.id_bloque = b.id
-       JOIN tipo_multa tm ON m.id_tipo_multa = tm.id
-       WHERE ap.id IN (
-         SELECT pga.id_apartamento
-         FROM propietario_gestion_apartamento pga
-         JOIN propietario pt ON pga.id_propietario = pt.id
-         JOIN user_data ud ON pt.id_user_data = ud.id
-         WHERE ud.id_usuario = ? AND pga.estado = 'Activo'
-       )
-       AND m.estado = ?
-       ORDER BY m.id DESC`,
-      [idUsuario, 'Pendiente']
-    );
-
-    res.json(multas);
-  } catch (error) {
-    console.error('Error al obtener mis multas:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

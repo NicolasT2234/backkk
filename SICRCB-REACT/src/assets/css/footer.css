@@ -1,164 +1,362 @@
-.app-footer {
+/* =========================================================
+   FOOTER SICRCB - SISTEMA DE DISEÑO ELEGANTE Y RESPONSIVE
+   ========================================================= */
+
+.sicrcb-footer {
   width: 100%;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  flex-shrink: 0;
   margin-top: auto;
-}
-.app-footer .footer-inner {
-  background-color: rgb(140, 50, 0);
-  padding: 28px 4vw 0 4vw;
   position: relative;
-  overflow: hidden;
-}
-
-.app-footer .footer-inner::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #FFD0A0, #f8c1bf, #FFD0A0);
-}
-
-.app-footer .footer-container {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding-bottom: 18px;
-}
-
-.app-footer .footer-brand {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 22px;
-}
-
-.app-footer .footer-brand-title {
-  font-size: 18px;
-  font-weight: 700;
+  background: linear-gradient(180deg, #8c3200 0%, #632200 60%, #4a1900 100%);
   color: #fff3e0;
-  letter-spacing: 0.5px;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: inherit;
 }
 
-.app-footer .footer-brand-subtitle {
-  font-size: 11.5px;
-  color: #FFD0A0;
-  opacity: 0.85;
+/* Barra superior de luz degradada */
+.sicrcb-footer .footer-glow-bar {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #8c3200 0%, #f47820 25%, #ffd0a0 50%, #f47820 75%, #8c3200 100%);
+  box-shadow: 0 0 14px rgba(244, 120, 32, 0.6);
 }
 
-.app-footer .footer-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 240, 224, 0.15);
+.sicrcb-footer .footer-main-wrapper {
+  padding: 3rem 1.75rem 1.5rem 1.75rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.app-footer .footer-col {
-  flex: 1 1 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.sicrcb-footer .footer-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1.15fr 1.15fr;
+  gap: 2.25rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid rgba(255, 208, 160, 0.18);
 }
 
-.app-footer .footer-col-header {
+/* Blindaje de botones internos del footer */
+.sicrcb-footer button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  min-width: unset !important;
+  min-height: unset !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Columna 1: Branding */
+.sicrcb-footer .footer-brand-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
 }
 
-.app-footer .footer-icon {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: 9999px;
-  background-color: #FFD0A0;
+.sicrcb-footer .footer-logo-box {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 208, 160, 0.28);
+  border-radius: 10px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.app-footer .footer-icon svg {
-  width: 16px;
-  height: 16px;
-  color: #8C3200;
+.sicrcb-footer .footer-logo-img {
+  width: 38px;
+  height: 30px;
+  object-fit: contain;
 }
 
-.app-footer .footer-icon-alert {
-  background-color: #f8c1bf;
+.sicrcb-footer .footer-brand-title {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffd0a0;
+  line-height: 1.1;
 }
 
-.app-footer .footer-col h6 {
-  color: #fff3e0;
-  font-size: 13.5px;
-  font-weight: 700;
-  margin: 0;
+.sicrcb-footer .footer-brand-tag {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 208, 160, 0.75);
+  font-weight: 600;
+}
+
+.sicrcb-footer .footer-brand-desc {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #ffd0a0;
+  opacity: 0.85;
+  margin-bottom: 1.25rem;
   text-align: left;
 }
 
-.app-footer .footer-col p {
-  text-align: left;
-  font-style: normal;
-  opacity: 0.9;
-  color: #FFD0A0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  margin: 0;
-  padding: 0;
+.sicrcb-footer .footer-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 208, 160, 0.2);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  color: #ffd0a0;
+  font-weight: 600;
 }
 
-.app-footer .footer-with-icon {
+.sicrcb-footer .status-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #52c41a;
+  box-shadow: 0 0 8px #52c41a;
+}
+
+/* Encabezados de Columna */
+.sicrcb-footer .footer-col-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.65rem;
+  margin-bottom: 1.2rem;
 }
 
-.app-footer .footer-with-icon svg {
-  width: 14px;
-  height: 14px;
-  min-width: 14px;
-  color: #FFD0A0;
-  opacity: 0.85;
+.sicrcb-footer .col-title-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 208, 160, 0.12);
+  border: 1px solid rgba(255, 208, 160, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.app-footer .footer-link {
-  color: #FFD0A0;
+.sicrcb-footer .footer-col-title h6 {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+/* Lista de Información */
+.sicrcb-footer .footer-info-list {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sicrcb-footer .footer-info-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #ffd0a0;
+  text-align: left;
+}
+
+.sicrcb-footer .footer-info-list .info-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #f47820;
+}
+
+/* Tarjetas de Contacto */
+.sicrcb-footer .footer-contact-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sicrcb-footer .contact-card-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 208, 160, 0.2);
+  border-radius: 10px;
   text-decoration: none;
-  transition: color 0.2s ease, opacity 0.2s ease;
+  color: #ffd0a0;
+  transition: all 0.22s ease;
 }
 
-.app-footer .footer-link:hover {
-  color: #fff3e0;
-  opacity: 1;
+.sicrcb-footer .contact-card-link:hover {
+  background: rgba(244, 120, 32, 0.2);
+  border-color: #ffd0a0;
+  color: #ffffff;
+  transform: translateX(3px);
 }
 
-.app-footer .footer-bottom {
-  padding-top: 14px;
-  text-align: center;
+.sicrcb-footer .contact-card-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
 }
 
-.app-footer .footer-bottom span {
-  font-size: 11px;
-  color: #FFD0A0;
-  opacity: 0.6;
-  letter-spacing: 0.3px;
+.sicrcb-footer .contact-card-text small {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
 }
 
-@media (max-width: 600px) {
-  .app-footer .footer-inner {
-    padding: 22px 6vw 0 6vw;
+.sicrcb-footer .contact-card-text span {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+/* Tarjeta de Emergencia / Urgencias */
+.sicrcb-footer .footer-alert-card {
+  background: linear-gradient(145deg, rgba(244, 120, 32, 0.16) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border: 1px solid rgba(244, 120, 32, 0.4);
+  border-radius: 14px;
+  padding: 1.15rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  text-align: left;
+}
+
+.sicrcb-footer .alert-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.sicrcb-footer .alert-badge-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f47820;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(244, 120, 32, 0.5);
+}
+
+.sicrcb-footer .alert-card-header h6 {
+  margin: 0;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.sicrcb-footer .alert-card-desc {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #ffd0a0;
+  opacity: 0.92;
+  margin: 0 0 0.9rem 0;
+}
+
+.sicrcb-footer .alert-porteria-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.55rem;
+  background: #f47820;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.sicrcb-footer .alert-porteria-btn:hover {
+  background: #ff8c3b;
+  box-shadow: 0 4px 12px rgba(244, 120, 32, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Barra inferior (Copyright y Volver arriba) */
+.sicrcb-footer .footer-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1.5rem;
+  font-size: 0.78rem;
+  color: rgba(255, 208, 160, 0.75);
+}
+
+.sicrcb-footer .bottom-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.sicrcb-footer .bottom-left strong {
+  color: #ffd0a0;
+}
+
+.sicrcb-footer .bottom-divider {
+  opacity: 0.4;
+}
+
+.sicrcb-footer .footer-scroll-top-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  padding: 0.4rem 0.85rem !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 208, 160, 0.25) !important;
+  border-radius: 18px !important;
+  color: #ffd0a0 !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.sicrcb-footer .footer-scroll-top-btn:hover {
+  background: #f47820 !important;
+  border-color: #f47820 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   RESPONSIVE (Tablets y Móviles)
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .sicrcb-footer .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .sicrcb-footer .footer-main-wrapper {
+    padding: 2.25rem 1.25rem 1.25rem 1.25rem;
   }
 
-  .app-footer .footer-container {
-    padding-bottom: 14px;
+  .sicrcb-footer .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
-  .app-footer .footer-grid {
+  .sicrcb-footer .footer-bottom-bar {
     flex-direction: column;
-    gap: 20px;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .sicrcb-footer .bottom-left {
+    justify-content: center;
   }
 }

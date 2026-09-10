@@ -546,3 +546,33 @@
     padding: 1.25rem 1rem 2.5rem 1rem;
   }
 }
+
+/* Spinner de carga */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* =========================================================
+   FOOTER (100% FULL-WIDTH)
+   ========================================================= */
+.dashboard-page .app-footer,
+.app-footer {
+  width: 100% !important;
+  margin: 0 !important;
+  margin-top: auto !important;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.dashboard-page .app-footer .footer-inner,
+.app-footer .footer-inner {
+  border-radius: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  margin: 0 !important;
+}

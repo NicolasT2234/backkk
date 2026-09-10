@@ -122,7 +122,7 @@ router.put('/:id',
       );
 
       await connection.commit();
-      res.json({ message: 'Salón comunal actualizado exitosamente' );
+      res.json({ message: 'Salón comunal actualizado exitosamente' });
     } catch (error) {
       await connection.rollback();
       console.error('Error al actualizar salón comunal:', error);

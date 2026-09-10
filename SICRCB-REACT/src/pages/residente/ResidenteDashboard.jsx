@@ -4,207 +4,326 @@ import api from "../../services/api"
 import "../../assets/css/styles.css"
 import "../../assets/css/dashboard.css"
 import NavbarApp from "../../components/NavbarApp.jsx"
+import Footer from "../../components/Footer.jsx"
 import { useAuth } from "../../context/AuthContext"
+import {
+  ReceiptText,
+  CalendarDays,
+  Newspaper,
+  MessageSquareText,
+  User,
+  ChevronRight,
+  ShieldAlert,
+  Phone,
+  Home,
+  Clock,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react"
 
 function ResidenteDashboard() {
   const navigate = useNavigate()
   const { user: authUser, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
-  // Dashboard data
+  // Datos del dashboard
   const [pendingMultas, setPendingMultas] = useState(0)
   const [paidMultas, setPaidMultas] = useState(0)
   const [upcomingReservas, setUpcomingReservas] = useState([])
   const [latestNoticias, setLatestNoticias] = useState([])
 
   useEffect(() => {
-    // If auth is still loading, we keep loading true
-    if (authLoading) {
-      setLoading(true)
-      return
-    }
+    if (authLoading) return
 
-    // If no user, redirect to login
     if (!authUser) {
       navigate("/login")
       return
     }
 
-    // Role check: only allow 'propietario' role to access this dashboard
     const userRole = authUser.rol?.toLowerCase() || ''
-    if (userRole !== 'propietario') {
-      // Redirect to admin dashboard if not a regular user (propietario)
+    if (userRole !== 'propietario' && userRole !== 'residente') {
       navigate("/dashboard")
       return
     }
 
-    // Fetch dashboard data if we have user
-    if (authUser && authUser.id) {
-      const userId = authUser.id
-
-      // Fetch multas count (then filter locally)
-      api.get(`/multas/mis-multas`)
+    if (authUser?.id) {
+      // 1. Multas del residente
+      api.get("/multas/mis-multas")
         .then(res => {
           const multas = Array.isArray(res.data) ? res.data : []
-          setPendingMultas(multas.filter(m => m.estado === 'Pendiente').length)
-          setPaidMultas(multas.filter(m => m.estado === 'Resuelta').length) // Assuming 'Resuelta' is paid
+          setPendingMultas(multas.filter(m => (m.estado || "").toLowerCase() === 'pendiente').length)
+          setPaidMultas(multas.filter(m => (m.estado || "").toLowerCase() === 'resuelta' || (m.estado || "").toLowerCase() === 'pagada').length)
         })
-        .catch(err => {
-          console.error("Error fetching multas:", err)
-          // Don't set error here to avoid breaking dashboard if one endpoint fails
-        })
+        .catch(err => console.error("Error al cargar multas:", err))
 
-      // Fetch upcoming reservations (sorted by start date ascending)
-      api.get(`/alquileres/mis-alquileres`)
+      // 2. Reservas de áreas comunes
+      api.get("/alquileres/mis-alquileres")
         .then(res => {
           const reservas = Array.isArray(res.data) ? res.data : []
-          // Show upcoming reservations (future dates) - but for simplicity, we'll show first 5
-          setUpcomingReservas(reservas.slice(0, 5))
+          setUpcomingReservas(reservas.slice(0, 4))
         })
-        .catch(err => {
-          console.error("Error fetching alquileres:", err)
-        })
+        .catch(err => console.error("Error al cargar alquileres:", err))
 
-      // Fetch latest featured news (public endpoint)
-      api.get(`/noticias/destacadas`)
+      // 3. Noticias comunitarias
+      api.get("/noticias/destacadas")
         .then(res => {
           setLatestNoticias(Array.isArray(res.data) ? res.data : [])
         })
-        .catch(err => {
-          console.error("Error fetching noticias:", err)
-        })
+        .catch(err => console.error("Error al cargar noticias:", err))
+        .finally(() => setLoading(false))
+    } else {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [authUser, authLoading, navigate])
-
-  if (loading) {
-    return <div className="dashboard-page">Cargando panel de residente...</div>
-  }
-
-  if (error) {
-    return (
-      <div className="dashboard-page">
-        <h1>Error</h1>
-        <p>{error}</p>
-        <button className="btn-success" onClick={() => navigate("/login")}>
-          Volver al inicio
-        </button>
-      </div>
-    )
-  }
 
   const handleLogout = async () => {
     try {
       await api.post("/auth/logout")
     } catch (err) {
-      console.error("Logout failed", err)
+      console.error("Logout fallido", err)
     } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
       navigate("/")
     }
   }
 
+  const residentName = authUser?.nombres || authUser?.nombre || "Residente"
+
   return (
     <div className="dashboard-page">
       <NavbarApp onLogout={handleLogout} />
-      <div className="titulo">
-        <h1>Panel de Residente</h1>
-      </div>
-      <div className="subtitulo">
-        <div className="subtitulo-banda">
-          Bienvenido, {authUser?.nombre || authUser?.email || 'Residente'}
-        </div>
-      </div>
 
-      <div className="grid-noticias">
-        {/* Estadística 1: Multas Pendientes */}
-        <div className="a-noticia">
-          <legend>Multas Pendientes</legend>
-          <hr />
-          <div className="stat-card">
-            <h3>Total</h3>
-            <p className="stat-number">{pendingMultas}</p>
+      <main className="dashboard-main-content">
+        {/* Banner de bienvenida al conjunto */}
+        <section className="sicrcb-dash-hero">
+          <div className="dash-hero-text">
+            <h1>
+              <span>¡Hola, {residentName.split(" ")[0]}!</span>
+              <Sparkles size={24} stroke="#FFD0A0" />
+            </h1>
+            <p>Bienvenido al portal del Conjunto Residencial Casa Blanca.</p>
           </div>
-        </div>
-
-        {/* Estadística 2: Multas Pagadas */}
-        <div className="a-noticia">
-          <legend>Multas Pagadas</legend>
-          <hr />
-          <div className="stat-card">
-            <h3>Total</h3>
-            <p className="stat-number">{paidMultas}</p>
+          <div className="dash-hero-badge">
+            <Home size={16} stroke="#FFD0A0" />
+            <span>Apartamento al día</span>
           </div>
-        </div>
+        </section>
 
-        {/* Estadística 3: Próximas Reservas */}
-        <div className="a-noticia full-width">
-          <legend>Próximas Reservas</legend>
-          <hr />
-          {upcomingReservas.length > 0 ? (
-            <div>
-              {upcomingReservas.map((reserva, index) => (
-                <div key={index} className="reserva-item">
-                  <p><strong>{reserva.nombre_solicitante}</strong></p>
-                  <p>
-                    {reserva.tipo_alquiler} - {reserva.cantidad_sillas} sillas
-                  </p>
-                  <p>
-                    Desde: {new Date(reserva.fecha_inicio).toLocaleDateString()}
-                    Hasta: {new Date(reserva.fecha_fin).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
+        {/* Tarjetas KPI de Estado */}
+        <section className="sicrcb-dash-kpis">
+          <div className="dash-kpi-card" onClick={() => navigate("/multas")} role="button" tabIndex={0}>
+            <div className={`kpi-icon-box ${pendingMultas > 0 ? "kpi-warning" : "kpi-success"}`}>
+              <ReceiptText size={24} />
             </div>
-          ) : (
-            <p>No tienes reservas próximas.</p>
-          )}
-        </div>
-
-        {/* Estadística 4: Últimas Noticias */}
-        <div className="a-noticia full-width">
-          <legend>Últimas Noticias</legend>
-          <hr />
-          {latestNoticias.length > 0 ? (
-            <div>
-              {latestNoticias.map((noticia, index) => (
-                <div key={index} className="noticia-item">
-                  <p><strong>{noticia.titulo || 'Noticia'}</strong></p>
-                  <p>
-                    {new Date(noticia.fecha_publicacion).toLocaleDateString()}
-                  </p>
-                  {noticia.descripcion && (
-                    <p className="noticia-descripcion">{noticia.descripcion.substring(0, 100)}...</p>
-                  )}
-                </div>
-              ))}
+            <div className="kpi-info-box">
+              <span className="kpi-label">Multas Pendientes</span>
+              <span className="kpi-value">{pendingMultas}</span>
+              <span className="kpi-subtext">
+                {pendingMultas === 0 ? "Al día con la administración" : "Requiere regularización"}
+              </span>
             </div>
-          ) : (
-            <p>No hay noticias disponibles.</p>
-          )}
-        </div>
-
-        {/* Accesos rápidos */}
-        <div className="a-noticia full-width">
-          <legend>Accesos Rápidos</legend>
-          <hr />
-          <div className="quick-actions">
-            <button className="btn-success" onClick={() => navigate("/multas")}>
-              Mis Multas
-            </button>
-            <button className="btn-success" onClick={() => navigate("/noticias")}>
-              Ver Noticias
-            </button>
-            <button className="btn-success" onClick={() => navigate("/alquiler")}>
-              Hacer una Reserva
-            </button>
-            <button className="btn-success" onClick={() => navigate("/perfil")}>
-              Mi Perfil
-            </button>
           </div>
+
+          <div className="dash-kpi-card" onClick={() => navigate("/multas")} role="button" tabIndex={0}>
+            <div className="kpi-icon-box kpi-success">
+              <CheckCircle2 size={24} />
+            </div>
+            <div className="kpi-info-box">
+              <span className="kpi-label">Multas Resueltas</span>
+              <span className="kpi-value">{paidMultas}</span>
+              <span className="kpi-subtext">Histórico pagado</span>
+            </div>
+          </div>
+
+          <div className="dash-kpi-card" onClick={() => navigate("/alquiler")} role="button" tabIndex={0}>
+            <div className="kpi-icon-box">
+              <CalendarDays size={24} />
+            </div>
+            <div className="kpi-info-box">
+              <span className="kpi-label">Mis Reservas</span>
+              <span className="kpi-value">{upcomingReservas.length}</span>
+              <span className="kpi-subtext">Espacios agendados</span>
+            </div>
+          </div>
+
+          <div className="dash-kpi-card" onClick={() => navigate("/noticias")} role="button" tabIndex={0}>
+            <div className="kpi-icon-box kpi-info">
+              <Newspaper size={24} />
+            </div>
+            <div className="kpi-info-box">
+              <span className="kpi-label">Noticias Activas</span>
+              <span className="kpi-value">{latestNoticias.length}</span>
+              <span className="kpi-subtext">Comunidad Casa Blanca</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Layout de Contenido Principal + Lateral */}
+        <div className="sicrcb-dash-layout">
+          
+          {/* Columna Izquierda: Reservas y Noticias */}
+          <div className="dash-main-col">
+            
+            {/* Próximas Reservas */}
+            <div className="sicrcb-card">
+              <div className="sicrcb-card-header">
+                <div className="card-title-group">
+                  <CalendarDays size={20} stroke="#8C3200" />
+                  <h3>Mis Próximas Reservas de Áreas Comunes</h3>
+                </div>
+                <button
+                  type="button"
+                  className="card-header-badge"
+                  onClick={() => navigate("/alquiler")}
+                >
+                  Solicitar nueva +
+                </button>
+              </div>
+              <div className="sicrcb-card-body">
+                {upcomingReservas.length > 0 ? (
+                  <div className="dash-reservas-list">
+                    {upcomingReservas.map((reserva, idx) => (
+                      <div key={idx} className="dash-reserva-item">
+                        <div className="reserva-meta">
+                          <div className="reserva-icon">
+                            <Home size={20} />
+                          </div>
+                          <div className="reserva-details">
+                            <strong>{reserva.tipo_alquiler || "Salón Comunal"}</strong>
+                            <span>
+                              Fecha: {reserva.fecha_inicio ? new Date(reserva.fecha_inicio).toLocaleDateString() : "Por confirmar"}
+                              {reserva.cantidad_sillas ? ` · ${reserva.cantidad_sillas} sillas` : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="reserva-badge">Confirmada</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "1.5rem", color: "#8C3200" }}>
+                    <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.92rem" }}>No tienes reservas activas de zonas comunes.</p>
+                    <button
+                      type="button"
+                      className="sicrcb-dash-action-btn"
+                      style={{ maxWidth: "220px", margin: "0 auto" }}
+                      onClick={() => navigate("/alquiler")}
+                    >
+                      <span className="action-btn-left">
+                        <CalendarDays size={16} />
+                        <span>Hacer una Reserva</span>
+                      </span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Boletín Comunitario / Noticias */}
+            <div className="sicrcb-card">
+              <div className="sicrcb-card-header">
+                <div className="card-title-group">
+                  <Newspaper size={20} stroke="#8C3200" />
+                  <h3>Boletín y Comunicados Oficiales</h3>
+                </div>
+                <span className="card-header-badge">Últimos avisos</span>
+              </div>
+              <div className="sicrcb-card-body">
+                {latestNoticias.length > 0 ? (
+                  <div className="dash-noticias-list">
+                    {latestNoticias.map((noticia, idx) => (
+                      <article key={idx} className="dash-noticia-item" onClick={() => navigate("/noticias")} style={{ cursor: "pointer" }}>
+                        <div className="noticia-header-row">
+                          <strong>{noticia.titulo || "Aviso a la Comunidad"}</strong>
+                          <span className="noticia-date">
+                            {noticia.fecha_publicacion ? new Date(noticia.fecha_publicacion).toLocaleDateString() : "Reciente"}
+                          </span>
+                        </div>
+                        <p className="noticia-snippet">
+                          {noticia.descripcion ? noticia.descripcion.substring(0, 130) + "..." : "Haz clic para leer el comunicado completo."}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ textAlign: "center", color: "#8c3200", margin: "1rem 0" }}>
+                    No hay nuevos comunicados por el momento.
+                  </p>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Columna Derecha: Accesos rápidos & Asistencia */}
+          <div className="dash-side-col">
+            
+            {/* Accesos Rápidos para Residentes */}
+            <div className="sicrcb-card">
+              <div className="sicrcb-card-header">
+                <div className="card-title-group">
+                  <Sparkles size={18} stroke="#8C3200" />
+                  <h3>Gestiones Rápidas</h3>
+                </div>
+              </div>
+              <div className="sicrcb-card-body">
+                <div className="dash-actions-grid">
+                  <button type="button" className="sicrcb-dash-action-btn" onClick={() => navigate("/multas")}>
+                    <span className="action-btn-left">
+                      <ReceiptText size={18} />
+                      <span>Consultar Multas</span>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" className="sicrcb-dash-action-btn" onClick={() => navigate("/alquiler")}>
+                    <span className="action-btn-left">
+                      <CalendarDays size={18} />
+                      <span>Reservar Salón Comunal</span>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" className="sicrcb-dash-action-btn" onClick={() => navigate("/pqrs")}>
+                    <span className="action-btn-left">
+                      <MessageSquareText size={18} />
+                      <span>Radicar Petición / PQRS</span>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" className="sicrcb-dash-action-btn" onClick={() => navigate("/perfil")}>
+                    <span className="action-btn-left">
+                      <User size={18} />
+                      <span>Actualizar Mis Datos</span>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Asistencia Directa y Portería 24/7 */}
+            <div className="resident-emergency-card">
+              <div className="resident-emergency-header">
+                <ShieldAlert size={22} stroke="#8C3200" />
+                <h4>Portería Casa Blanca</h4>
+              </div>
+              <p>
+                Para emergencias residenciales, acceso de ambulancias, mudanzas o reportes urgentes 24 horas al día.
+              </p>
+              <a href="tel:6010000001" className="resident-call-btn">
+                <Phone size={15} />
+                <span>Contactar a Portería</span>
+              </a>
+            </div>
+
+          </div>
+
         </div>
-      </div>
+      </main>
+
+      <Footer style={{ marginTop: "auto" }} />
     </div>
   )
 }

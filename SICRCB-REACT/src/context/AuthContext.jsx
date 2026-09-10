@@ -6,7 +6,7 @@ const AuthContext = createContext();
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth debe ser usado dentro de un AuthProvider");
   }
   return context;
 };
@@ -15,14 +15,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user data on mount
+  // Verificar la sesión al montar la app
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const res = await api.get("/usuarios/me");
         setUser(res.data);
       } catch (err) {
-        // If fails, user is not logged in
         setUser(null);
       } finally {
         setLoading(false);
@@ -32,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  const login = async (userData) => {
+  const login = (userData) => {
     setUser(userData);
   };
 
@@ -40,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post("/auth/logout");
     } catch (err) {
-      console.error("Logout failed", err);
+      console.error("Error al cerrar sesión:", err);
     } finally {
       setUser(null);
     }
@@ -55,7 +54,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

@@ -1,89 +1,50 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../../services/api"
 import "../../assets/css/styles.css"
-import "../../assets/css/noticias_resi.css"
+import "../../assets/css/noticias.css"
 import NavbarApp from "../../components/NavbarApp.jsx"
 import Footer from "../../components/Footer.jsx"
+import {
+  Newspaper,
+  Calendar,
+  Search,
+  FileText,
+  Image as ImageIcon,
+  ArrowRight,
+  X,
+  ExternalLink,
+  BellRing
+} from "lucide-react"
 
-function NoticiaResi() {
+function NoticiasResi() {
   const navigate = useNavigate()
-
-  const handleLogout = async () => {
-    try {
-      await api.post("/auth/logout");
-    } catch (err) {
-      console.error("Logout failed", err);
-    } finally {
-      navigate("/");
-    }
-  };
-
   const [noticias, setNoticias] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
-  const [filtroTexto, setFiltroTexto] = useState("")
-
+  const [searchTerm, setSearchTerm] = useState("")
   const [noticiaActiva, setNoticiaActiva] = useState(null)
 
-  // --- Paginación ---
-  const porPagina = 6
-  const [paginaActual, setPaginaActual] = useState(1)
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    navigate("/login")
+  }
 
-  useEffect(() => {
-    const fetchNoticias = async () => {
-      setLoading(true)
-      setError("")
-      try {
-        // Changed to highlighted news endpoint (public)
-        const res = await api.get("/noticias/destacadas")
-        const data = Array.isArray(res.data) ? res.data : []
-        const noticiasList = [...data] // copy to avoid mutating original
-        noticiasList.sort((a, b) => new Date(b.fechaPublicacion || 0) - new Date(a.fechaPublicacion || 0))
-        setNoticias(noticiasList)
-      } catch (err) {
-        console.error("Error fetching noticias:", err)
-        setError("Error al cargar noticias")
-        setNoticias([])
-      } finally {
-        setLoading(false)
-      }
+  const getBackendUrl = () => {
+    if (import.meta.env.PROD) {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+      return apiUrl.replace(/\/api$/, "")
     }
-
-    fetchNoticias()
-  }, [])
-
-  // Vuelve a la página 1 cada vez que cambia la búsqueda
-  useEffect(() => {
-    setPaginaActual(1)
-  }, [filtroTexto])
-
-  const getId = (n) => n.id || n._id || n.idNoticia
-  const getTitulo = (n) => n.titulo || n.asunto || "Sin título"
-  const getDescripcion = (n) => n.descripcion || n.contenido || ""
-  // Get backend URL for static files (consistent with API configuration)
-const getBackendUrl = () => {
-  if (import.meta.env.PROD) {
-    // In production, use VITE_API_URL (remove /api suffix if present)
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    return apiUrl.replace(/\/api$/, '');
-  } else {
-    // In development, Vite proxies /api to http://localhost:5000
-    // Static files are served directly from the backend server
-    return 'http://localhost:5000';
+    return "http://localhost:5000"
   }
-};
 
-const getArchivoUrl = (n) => {
-  const archivo = n.archivo_url || n.archivoUrl || n.archivo || n.imagenUrl || n.imagen || null;
-  // If we have an archivo path, return the full URL
-  if (archivo) {
-    return `${getBackendUrl()}${archivo}`;
+  const getArchivoUrl = (n) => {
+    const archivo = n.archivo_url || n.archivoUrl || n.archivo || n.imagenUrl || n.imagen || null
+    if (archivo) {
+      return `${getBackendUrl()}${archivo}`
+    }
+    return null
   }
-  return null;
-}
-  const getFecha = (n) => n.fechaPublicacion || n.fechaEnvio || null
 
   const esImagen = (url) => {
     if (!url) return false
@@ -95,178 +56,200 @@ const getArchivoUrl = (n) => {
     return /\.pdf$/i.test(url)
   }
 
-  const noticiasFiltradas = (Array.isArray(noticias) ? noticias : []).filter((n) => {
-    const titulo = String(getTitulo(n) || "").toLowerCase()
-    const descripcion = String(getDescripcion(n) || "").toLowerCase()
-    const texto = String(filtroTexto || "").toLowerCase()
-    return titulo.includes(texto) || descripcion.includes(texto)
+  useEffect(() => {
+    const fetchNoticias = async () => {
+      setLoading(true)
+      try {
+        const res = await api.get("/noticias/destacadas")
+        const data = Array.isArray(res.data) ? res.data : []
+        const lista = [...data].sort((a, b) => new Date(b.fechaPublicacion || 0) - new Date(a.fechaPublicacion || 0))
+        setNoticias(lista)
+      } catch (err) {
+        console.error("Error al cargar noticias:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchNoticias()
+  }, [])
+
+  // Filtrado de noticias
+  const noticiasFiltradas = noticias.filter((n) => {
+    const titulo = (n.titulo || n.asunto || "").toLowerCase()
+    const desc = (n.descripcion || n.contenido || "").toLowerCase()
+    const term = searchTerm.toLowerCase()
+    return titulo.includes(term) || desc.includes(term)
   })
 
-  // --- Cálculo de la página actual ---
-  const totalPaginas = Math.max(1, Math.ceil(noticiasFiltradas.length / porPagina))
-  const paginaSegura = Math.min(paginaActual, totalPaginas)
-  const inicio = (paginaSegura - 1) * porPagina
-  const noticiasPagina = noticiasFiltradas.slice(inicio, inicio + porPagina)
-
-  const irPaginaAnterior = () => {
-    setPaginaActual((p) => Math.max(1, p - 1))
-  }
-
-  const irPaginaSiguiente = () => {
-    setPaginaActual((p) => Math.min(totalPaginas, p + 1))
-  }
-
   return (
-    <>
+    <div className="noticias-page">
       <NavbarApp onLogout={handleLogout} />
-      <div className="noticias-res-page">
-        <div className="titulo">
-          <h1>NOTICIAS</h1>
-        </div>
 
-        <div className="subtitulo">
-          <span className="subtitulo-banda">Publicaciones y Comunicados</span>
-        </div>
+      <main className="noticias-main-container">
+        {/* Banner Superior */}
+        <section className="sicrcb-news-hero">
+          <div className="news-hero-text">
+            <h1>
+              <span>Boletín Oficial & Noticias</span>
+              <Newspaper size={26} stroke="#FFD0A0" />
+            </h1>
+            <p>Comunidad y avisos importantes del Conjunto Residencial Casa Blanca.</p>
+          </div>
+          <div className="news-hero-badge">
+            <BellRing size={16} stroke="#FFD0A0" />
+            <span>{noticias.length} Comunicados Activos</span>
+          </div>
+        </section>
 
-        <div className="noticias-content">
-
-          <div className="filtros-row">
+        {/* Buscador */}
+        <div className="sicrcb-news-toolbar">
+          <span style={{ fontWeight: "700", color: "#8C3200", fontSize: "0.95rem" }}>
+            Últimas Actualizaciones
+          </span>
+          <div className="news-search-box">
+            <Search size={17} className="news-search-icon" />
             <input
               type="text"
-              className="input filtro-input"
-              placeholder="Buscar noticia..."
-              value={filtroTexto}
-              onChange={(e) => setFiltroTexto(e.target.value)}
+              className="news-search-input"
+              placeholder="Buscar en comunicados..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          {loading && <p className="hint">Cargando noticias...</p>}
-          {error && <p className="error">{error}</p>}
-          {!loading && !error && noticias.length === 0 && (
-            <p className="hint">No hay noticias publicadas por el momento</p>
-          )}
-          {!loading && !error && noticias.length > 0 && noticiasFiltradas.length === 0 && (
-            <p className="hint">Ningún resultado coincide con tu búsqueda.</p>
-          )}
-
-          {!loading && noticiasPagina.length > 0 && (
-            <div className="noticias-grid">
-              {noticiasPagina.map((n) => {
-                const id = getId(n)
-                const url = getArchivoUrl(n)
-                const fecha = getFecha(n)
-                return (
-                  <div className="noticia-card" key={id}>
-                    <div className="noticia-imagen">
-                      {esImagen(url) ? (
-                        <img src={url} alt={getTitulo(n)} />
-                      ) : esPdf(url) ? (
-                        <div className="noticia-pdf-placeholder">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125.1125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                          </svg>
-                          <span>Documento PDF</span>
-                        </div>
-                      ) : (
-                        <div className="noticia-sin-imagen">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 8.25V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V8.25M3 8.25V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v2.25M3 8.25h18" />
-                          </svg>
-                          <span>SICRCB</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="noticia-body">
-                      <span className="noticia-fecha">
-                        {fecha ? new Date(fecha).toLocaleDateString() : "Sin fecha"}
-                      </span>
-                      <h3 className="noticia-titulo">{getTitulo(n)}</h3>
-                      {getDescripcion(n) && (
-                        <p className="noticia-descripcion">{getDescripcion(n)}</p>
-                      )}
-                      <button type="button" className="btn-ver-noticia" onClick={() => setNoticiaActiva(n)}>
-                        Ver más
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* --- Paginación --- */}
-          {!loading && noticiasFiltradas.length > porPagina && (
-            <div className="paginacion">
-              <button
-                type="button"
-                className="pagina-flecha"
-                onClick={irPaginaAnterior}
-                disabled={paginaSegura === 1}
-                aria-label="Página anterior"
-              >
-                &#8249;
-              </button>
-
-              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  className={`pagina-numero ${num === paginaSegura ? "activa" : ""}`}
-                  onClick={() => setPaginaActual(num)}
-                >
-                  {num}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                className="pagina-flecha"
-                onClick={irPaginaSiguiente}
-                disabled={paginaSegura === totalPaginas}
-                aria-label="Página siguiente"
-              >
-                &#8250;
-              </button>
-            </div>
-          )}
-
-          {/* --- Modal: detalle de noticia --- */}
-          {noticiaActiva && (
-            <div className="modal-overlay" onClick={() => setNoticiaActiva(null)}>
-              <div className="noticia-modal" onClick={(e) => e.stopPropagation()}>
-                {getArchivoUrl(noticiaActiva) && esImagen(getArchivoUrl(noticiaActiva)) && (
-                  <img className="noticia-modal-imagen" src={getArchivoUrl(noticiaActiva)} alt={getTitulo(noticiaActiva)} />
-                )}
-                <div className="noticia-modal-body">
-                  <span className="noticia-fecha">
-                    {getFecha(noticiaActiva) ? new Date(getFecha(noticiaActiva)).toLocaleDateString() : "Sin fecha"}
-                  </span>
-                  <h3 className="noticia-titulo">{getTitulo(noticiaActiva)}</h3>
-                  <p className="noticia-descripcion-completa">{getDescripcion(noticiaActiva) || "Sin descripción disponible."}</p>
-
-                  {getArchivoUrl(noticiaActiva) && esPdf(getArchivoUrl(noticiaActiva)) && (
-                    <a
-                      className="noticia-pdf-link"
-                      href={getArchivoUrl(noticiaActiva)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Ver documento PDF
-                    </a>
-                  )}
-                </div>
-                <div className="actions">
-                  <button className="cancel" type="button" onClick={() => setNoticiaActiva(null)}>Cerrar</button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        <Footer />
-      </div>
-    </>
+        {/* Grid de Noticias */}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "4rem 0", color: "#8C3200" }}>
+            Cargando boletín comunitario...
+          </div>
+        ) : noticiasFiltradas.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "4rem 1rem", background: "#ffffff", borderRadius: "18px", border: "1px solid rgba(140,50,0,0.12)" }}>
+            <Newspaper size={48} stroke="#8C3200" style={{ opacity: 0.5, marginBottom: "1rem" }} />
+            <h3 style={{ color: "#8C3200", fontWeight: "800", margin: "0 0 0.5rem 0" }}>
+              No se encontraron comunicados
+            </h3>
+            <p style={{ color: "#735340", margin: 0 }}>
+              No hay noticias que coincidan con los términos de búsqueda ingresados.
+            </p>
+          </div>
+        ) : (
+          <div className="sicrcb-news-grid">
+            {noticiasFiltradas.map((n) => {
+              const id = n.id || n._id || n.idNoticia
+              const titulo = n.titulo || n.asunto || "Comunicado Oficial"
+              const desc = n.descripcion || n.contenido || ""
+              const fecha = n.fechaPublicacion || n.fechaEnvio
+              const archivoUrl = getArchivoUrl(n)
+              const tieneImg = esImagen(archivoUrl)
+
+              return (
+                <article key={id} className="sicrcb-news-card">
+                  {/* Encabezado con imagen o placeholder */}
+                  <div className="news-card-media">
+                    {tieneImg ? (
+                      <img src={archivoUrl} alt={titulo} />
+                    ) : (
+                      <div className="news-media-placeholder">
+                        {esPdf(archivoUrl) ? <FileText size={36} /> : <Newspaper size={36} />}
+                        <span style={{ fontSize: "0.75rem", fontWeight: "700" }}>Casa Blanca</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="news-card-body">
+                    <div className="news-meta-row">
+                      <span className="news-badge">Oficial</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Calendar size={13} />
+                        {fecha ? new Date(fecha).toLocaleDateString() : "Reciente"}
+                      </span>
+                    </div>
+
+                    <h2 className="news-card-title">{titulo}</h2>
+                    <p className="news-card-desc">
+                      {desc.length > 115 ? desc.substring(0, 115) + "..." : desc}
+                    </p>
+                  </div>
+
+                  <div className="news-card-footer">
+                    <button
+                      type="button"
+                      className="news-read-more-btn"
+                      onClick={() => setNoticiaActiva(n)}
+                    >
+                      <span>Leer completo</span>
+                      <ArrowRight size={15} />
+                    </button>
+                    {archivoUrl && esPdf(archivoUrl) && (
+                      <span style={{ fontSize: "0.75rem", color: "#8C3200", fontWeight: "600" }}>
+                        PDF Adjunto
+                      </span>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* Modal para leer noticia completa */}
+      {noticiaActiva && (
+        <div className="sicrcb-news-modal-backdrop" onClick={() => setNoticiaActiva(null)}>
+          <div className="sicrcb-news-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="news-modal-header">
+              <h3>{noticiaActiva.titulo || "Comunicado de la Administración"}</h3>
+              <button
+                type="button"
+                onClick={() => setNoticiaActiva(null)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#8C3200" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="news-modal-body">
+              {getArchivoUrl(noticiaActiva) && esImagen(getArchivoUrl(noticiaActiva)) && (
+                <img
+                  src={getArchivoUrl(noticiaActiva)}
+                  alt="Imagen de noticia"
+                  className="news-modal-img"
+                />
+              )}
+
+              <div style={{ display: "flex", gap: "1rem", color: "#735340", fontSize: "0.82rem", marginBottom: "1.25rem" }}>
+                <span>Fecha: {new Date(noticiaActiva.fechaPublicacion || Date.now()).toLocaleDateString()}</span>
+                <span>·</span>
+                <span>Autor: Administración Casa Blanca</span>
+              </div>
+
+              <div className="news-modal-text">
+                {noticiaActiva.descripcion || noticiaActiva.contenido}
+              </div>
+
+              {getArchivoUrl(noticiaActiva) && esPdf(getArchivoUrl(noticiaActiva)) && (
+                <div style={{ marginTop: "1.5rem", padding: "1rem", background: "#fff8f2", borderRadius: "12px", border: "1px solid rgba(140,50,0,0.15)" }}>
+                  <a
+                    href={getArchivoUrl(noticiaActiva)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#8C3200", fontWeight: "700", textDecoration: "none" }}
+                  >
+                    <FileText size={18} />
+                    <span>Ver documento adjunto oficial (PDF)</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer style={{ marginTop: "auto" }} />
+    </div>
   )
 }
 
-export default NoticiaResi
+export default NoticiasResi
