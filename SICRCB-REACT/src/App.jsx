@@ -1,25 +1,34 @@
 import { Routes, Route, Navigate } from "react-router-dom"
-import Login from "./pages/shared/Login"
-import Registro from "./pages/shared/Registro"
-import Alquiler from "./pages/residente/Alquiler"
-import Multas from "./pages/admin/Multas"
-import Noticias from "./pages/admin/Noticias"
-import Dashboard from "./pages/admin/Dashboard"
-import Pqrs from "./pages/residente/Pqrs"
-import Recuperar from "./pages/Recuperar"
+
+// Páginas en src/pages/
 import Home from "./pages/Home"
 import Perfil from "./pages/Perfil"
-import Admin_Pqrs from "./pages/admin/Admin_Pqrs"
+import Recuperar from "./pages/Recuperar"
+
+// Páginas en src/pages/shared/
+import Login from "./pages/shared/Login"
+import RestablecerPassword from "./pages/shared/RestablecerPassword"
+
+// Páginas de Residente (src/pages/residente/)
+import Alquiler from "./pages/residente/Alquiler"
+import Pqrs from "./pages/residente/Pqrs"
 import ResidenteDashboard from "./pages/residente/ResidenteDashboard.jsx"
-import AlquilerAdmin from "./pages/admin/Alquiler-admin.jsx"
 import MultaResidente from "./pages/residente/Multa-Residente.jsx"
 import NoticiasResi from "./pages/residente/Noticias_resi.jsx"
+
+// Páginas de Administración (src/pages/admin/)
+import Dashboard from "./pages/admin/Dashboard"
+import Multas from "./pages/admin/Multas"
+import Noticias from "./pages/admin/Noticias"
+import AlquilerAdmin from "./pages/admin/Alquiler-admin.jsx"
+import Admin_Pqrs from "./pages/admin/Admin_Pqrs"
+import GestionUsuarios from "./pages/admin/GestionUsuarios.jsx"
+
 import { useAuth } from "./context/AuthContext"
 
 function RutaPrivada({ children, rolesPermitidos = [] }) {
   const { user, loading } = useAuth()
 
-  // 1. Mientras valida la sesión con el backend, esperar sin redirigir
   if (loading) {
     return (
       <div style={{
@@ -36,17 +45,14 @@ function RutaPrivada({ children, rolesPermitidos = [] }) {
     )
   }
 
-  // 2. Si terminó de cargar y no hay usuario autenticado, redirigir al login
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  // 3. Si no se especificaron roles requeridos, permitir acceso
   if (rolesPermitidos.length === 0) {
     return children
   }
 
-  // 4. Validar rol del usuario
   const userRole = user.rol?.toLowerCase() || ''
   const hasPermission = rolesPermitidos.some(role => role.toLowerCase() === userRole)
 
@@ -79,18 +85,26 @@ function AlquilerPorRol() {
 function App() {
   return (
     <Routes>
-      {/* Rutas públicas */}
+      {/* ============================== */}
+      {/* RUTAS PÚBLICAS                */}
+      {/* ============================== */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/registro" element={<Registro />} />
+      
+      {/* Recuperación de Contraseña */}
       <Route path="/recuperar" element={<Recuperar />} />
+      <Route path="/restablecer-password" element={<RestablecerPassword />} />
+
+      {/* Perfil del Usuario Autenticado */}
       <Route path="/perfil" element={
         <RutaPrivada>
           <Perfil />
         </RutaPrivada>
       } />
 
-      {/* Rutas compartidas por rol - mismo path, componente distinto */}
+      {/* ============================== */}
+      {/* RUTAS COMPARTIDAS POR ROL      */}
+      {/* ============================== */}
       <Route path="/multas" element={
         <RutaPrivada rolesPermitidos={['administrador', 'propietario']}>
           <MultasPorRol />
@@ -107,7 +121,9 @@ function App() {
         </RutaPrivada>
       } />
 
-      {/* Rutas exclusivas de residente (Propietario) */}
+      {/* ============================== */}
+      {/* RUTAS DE RESIDENTE            */}
+      {/* ============================== */}
       <Route path="/pqrs" element={
         <RutaPrivada rolesPermitidos={['propietario']}>
           <Pqrs />
@@ -119,10 +135,17 @@ function App() {
         </RutaPrivada>
       } />
 
-      {/* Rutas exclusivas de administrador */}
+      {/* ============================== */}
+      {/* RUTAS DE ADMINISTRACIÓN       */}
+      {/* ============================== */}
       <Route path="/dashboard" element={
         <RutaPrivada rolesPermitidos={['administrador']}>
           <Dashboard />
+        </RutaPrivada>
+      } />
+      <Route path="/admin/usuarios" element={
+        <RutaPrivada rolesPermitidos={['administrador']}>
+          <GestionUsuarios />
         </RutaPrivada>
       } />
       <Route path="/admin/noticias" element={
@@ -145,6 +168,9 @@ function App() {
           <Admin_Pqrs />
         </RutaPrivada>
       } />
+
+      {/* Redirección por defecto */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

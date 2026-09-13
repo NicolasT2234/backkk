@@ -11,15 +11,16 @@ import {
 } from "lucide-react"
 import logo from "../assets/img/Logo_SICRCB_dark_bg.png"
 import "../assets/css/auth.css"
+import api from "../services/api"
 
-function Recuperar() {
+export default function Recuperar() {
   const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [error, setError] = useState("")
   const [isSuccess, setIsSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
 
@@ -30,16 +31,22 @@ function Recuperar() {
 
     setIsLoading(true)
 
-    // Simulación / Conexión de envío de recuperación
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      await api.post("/auth/solicitar-recuperacion", { email })
       setIsSuccess(true)
-    }, 1200)
+    } catch (err) {
+      console.error("Error al solicitar recuperación:", err)
+      setError(
+        err.response?.data?.error ||
+        "No se pudo enviar el correo de recuperación. Verifica la dirección ingresada."
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <div className="sicrcb-auth-page">
-      {/* Botón Volver al Login */}
       <div className="auth-top-nav">
         <Link to="/login" className="auth-back-btn">
           <ArrowLeft size={16} />
@@ -47,7 +54,6 @@ function Recuperar() {
         </Link>
       </div>
 
-      {/* Tarjeta de Recuperación */}
       <div className="sicrcb-auth-card">
         <div className="auth-card-header">
           <div className="auth-logo-badge">
@@ -58,7 +64,6 @@ function Recuperar() {
         </div>
 
         <div className="auth-card-body">
-          {/* Vista 1: Correo enviado exitosamente */}
           {isSuccess ? (
             <div style={{ textAlign: "center", padding: "0.5rem 0" }}>
               <div
@@ -83,7 +88,7 @@ function Recuperar() {
               </h3>
 
               <p style={{ fontSize: "0.88rem", color: "#735340", lineHeight: "1.5", margin: "0 0 1.5rem 0" }}>
-                Hemos enviado las instrucciones para restablecer tu contraseña a <strong>{email}</strong>. Por favor revisa tu bandeja de entrada o carpeta de spam.
+                Hemos enviado las instrucciones para restablecer tu contraseña a <strong>{email}</strong>. Revisa tu bandeja de entrada o carpeta de spam.
               </p>
 
               <button
@@ -114,17 +119,16 @@ function Recuperar() {
               </div>
             </div>
           ) : (
-            /* Vista 2: Formulario de solicitud */
             <form onSubmit={handleSubmit}>
               {error && (
-                <div className="auth-alert-banner alert-error">
+                <div className="auth-alert-banner alert-error" style={{ marginBottom: "1rem" }}>
                   <AlertCircle size={18} />
                   <span>{error}</span>
                 </div>
               )}
 
-              <p style={{ fontSize: "0.88rem", color: "#735340", margin: "0 0 1.5rem 0", lineHeight: "1.5", textAlign: "left" }}>
-                Ingresa el correo electrónico asociado a tu cuenta de residente o administración y te enviaremos un enlace seguro para restablecer tu contraseña.
+              <p style={{ fontSize: "0.88rem", color: "#735340", margin: "0 0 1.5rem 0", lineHeight: "1.5" }}>
+                Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un enlace seguro para restablecer tu contraseña.
               </p>
 
               <div className="auth-form-group">
@@ -150,32 +154,20 @@ function Recuperar() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 size={18} className="auth-spinner" />
-                    <span>Enviando instrucciones...</span>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Enviando enlace...</span>
                   </>
                 ) : (
                   <>
-                    <Send size={16} />
-                    <span>Enviar enlace de recuperación</span>
+                    <Send size={18} />
+                    <span>Enviar Enlace de Recuperación</span>
                   </>
                 )}
               </button>
             </form>
           )}
-
-          {/* Pie de tarjeta con enlace directo a Login */}
-          <div className="auth-card-footer">
-            ¿Recordaste tu contraseña?
-            <Link to="/login">Inicia sesión aquí</Link>
-          </div>
         </div>
-      </div>
-
-      <div className="auth-page-copyright">
-        © {new Date().getFullYear()} SICRCB · Conjunto Residencial Casa Blanca
       </div>
     </div>
   )
 }
-
-export default Recuperar

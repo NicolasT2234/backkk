@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import logo from "../assets/img/Logo_SICRCB_dark_bg.png"
 import {
   LayoutDashboard,
+  Users, // <-- Ícono para la gestión de residentes
   ReceiptText,
   Newspaper,
   CalendarDays,
@@ -46,6 +47,8 @@ function NavbarApp({ onLogout }) {
     switch (targetKey) {
       case "dashboard":
         return current === "/dashboard" || current === "/residente-dashboard"
+      case "usuarios":
+        return current.includes("/admin/usuarios")
       case "multas":
         return current.startsWith("/multas")
       case "noticias":
@@ -72,6 +75,7 @@ function NavbarApp({ onLogout }) {
     }
   }
 
+  // Lista de elementos de navegación dinámica por rol
   const navItems = [
     {
       key: "dashboard",
@@ -79,6 +83,15 @@ function NavbarApp({ onLogout }) {
       path: isAdmin ? "/dashboard" : "/residente-dashboard",
       icon: LayoutDashboard
     },
+    // Solo visible para Administradores:
+    ...(isAdmin ? [
+      {
+        key: "usuarios",
+        label: "Residentes",
+        path: "/admin/usuarios",
+        icon: Users
+      }
+    ] : []),
     {
       key: "multas",
       label: "Multas",
@@ -195,7 +208,7 @@ function NavbarApp({ onLogout }) {
         </div>
       </header>
 
-      {/* Drawer Móvil */}
+      {/* Drawer Menú Móvil */}
       <div className={`sicrcb-drawer-overlay ${isMobileMenuOpen ? "open" : ""}`} onClick={() => setIsMobileMenuOpen(false)}>
         <aside className="sicrcb-drawer" onClick={(e) => e.stopPropagation()}>
           <div className="drawer-header">

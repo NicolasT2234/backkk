@@ -11,23 +11,24 @@ router.use((req, res, next) => {
   next();
 });
 
-// GET /usuarios (solo administradores)
+// GET /usuarios (Muestra a TODOS los usuarios sin ocultar ninguno)
 router.get('/', verificarToken, verificarRol('Administrador'), async (req, res, next) => {
   try {
     const [usuarios] = await pool.query(
-      `SELECT u.id, u.email, r.nombre as rol,
-              ud.primer_nombre as nombres,
-              ud.primer_nombre as nombre,
-              ud.primer_apellido as apellidos,
-              ud.primer_apellido as apellido,
+      `SELECT u.id, u.email, u.estado,
+              COALESCE(r.nombre, 'Sin Rol') as rol,
+              COALESCE(ud.primer_nombre, 'Sin registrar') as nombres,
+              COALESCE(ud.primer_nombre, 'Sin registrar') as nombre,
+              COALESCE(ud.primer_apellido, '') as apellidos,
+              COALESCE(ud.primer_apellido, '') as apellido,
               ud.numero_documento as numeroDocumento,
               td.nombre_documento as tipoDocumento
        FROM usuario u
-       JOIN rol_usuario ru ON u.id = ru.id_user
-       JOIN rol r ON ru.id_rol = r.id
+       LEFT JOIN rol_usuario ru ON u.id = ru.id_user
+       LEFT JOIN rol r ON ru.id_rol = r.id
        LEFT JOIN user_data ud ON u.id = ud.id_usuario
        LEFT JOIN tipo_documento td ON ud.id_tipo_documento = td.id
-       ORDER BY u.id`
+       ORDER BY u.id ASC`
     );
     res.json(usuarios);
   } catch (error) {

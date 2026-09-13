@@ -31,15 +31,18 @@ function Login() {
 
     try {
       const res = await api.post("/auth/login", {
-        email: correo,
-        contraseña: password
+        email: correo.trim().toLowerCase(),
+        contraseña: password.trim()
       })
       login(res.data.user)
       const userRole = (res.data.user?.rol || "").toLowerCase()
       const isAdmin = userRole.includes("admin") || userRole === "administrador"
       navigate(isAdmin ? "/dashboard" : "/residente-dashboard")
     } catch (err) {
-      setError("Correo o contraseña incorrectos. Por favor verifica tus credenciales.")
+      setError(
+        err.response?.data?.error || 
+        "Error al iniciar sesión. Verifica tus credenciales."
+      )
     } finally {
       setIsLoading(false)
     }
@@ -47,7 +50,6 @@ function Login() {
 
   return (
     <div className="sicrcb-auth-page">
-      {/* Botón Volver */}
       <div className="auth-top-nav">
         <Link to="/" className="auth-back-btn">
           <ArrowLeft size={16} />
@@ -55,7 +57,6 @@ function Login() {
         </Link>
       </div>
 
-      {/* Tarjeta de Inicio de Sesión */}
       <div className="sicrcb-auth-card">
         <div className="auth-card-header">
           <div className="auth-logo-badge">
@@ -74,7 +75,6 @@ function Login() {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* Campo: Correo Electrónico */}
             <div className="auth-form-group">
               <label className="auth-label">Correo Electrónico</label>
               <div className="auth-input-wrapper">
@@ -91,7 +91,6 @@ function Login() {
               </div>
             </div>
 
-            {/* Campo: Contraseña */}
             <div className="auth-form-group">
               <label className="auth-label">Contraseña</label>
               <div className="auth-input-wrapper">
@@ -115,14 +114,12 @@ function Login() {
               </div>
             </div>
 
-            {/* Enlace: Olvido de contraseña */}
             <div className="auth-aux-links">
               <Link to="/recuperar" className="auth-forgot-link">
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
 
-            {/* Botón Submit */}
             <button
               type="submit"
               className="auth-submit-btn"
@@ -142,11 +139,7 @@ function Login() {
             </button>
           </form>
 
-          {/* Enlace a Registro */}
-          <div className="auth-card-footer">
-            ¿Aún no tienes cuenta?
-            <Link to="/registro">Regístrate aquí</Link>
-          </div>
+          {/* El registro fue retirado: solo el Administrador crea usuarios */}
         </div>
       </div>
 
