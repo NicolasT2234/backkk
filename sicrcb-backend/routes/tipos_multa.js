@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db');
-const { verificarToken, verificarRol } = require('../auth');
+const { verificarToken, verificarRol } = require('../middlewares/auth');
 const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
@@ -66,7 +66,7 @@ router.post(
     const numeroTrim = numero.trim();
     const descripcionTrim = descripcion.trim();
     const valorNum = parseFloat(valor);
-    
+
     // Asignación estricta a 'Activa' o 'Inactiva'
     let estadoTrim = 'Activa';
     if (estado) {

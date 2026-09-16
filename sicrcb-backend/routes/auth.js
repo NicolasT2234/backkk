@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db');
-const { verificarToken, verificarRol } = require('../auth');
+const { verificarToken, verificarRol } = require('../middlewares/auth');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 
@@ -212,51 +212,6 @@ router.post(
     }
   }
 );
-
-// ==========================================
-// POST /recuperar-password
-// Restablece la contraseña validando Email + Cédula
-// ==========================================
-router.post('/recuperar-password', async (req, res, next) => {
-  const { email, numeroDocumento, nuevaContraseña } = req.body;
-
-  if (!email || !numeroDocumento || !nuevaContraseña) {
-    return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
-  }
-
-  if (nuevaContraseña.trim().length < 6) {
-    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
-  }
-
-  try {
-    // 1. Validar que el correo coincida con el documento del usuario
-    const [coincidencias] = await pool.query(
-      `SELECT u.id 
-       FROM usuario u
-       INNER JOIN user_data ud ON u.id = ud.id_usuario
-       WHERE u.email = ? AND ud.numero_documento = ? AND u.estado = 'Activo'`,
-      [email.trim().toLowerCase(), numeroDocumento.toString().trim()]
-    );
-
-    if (coincidencias.length === 0) {
-      return res.status(404).json({
-        error: 'Los datos no coinciden con ningún residente activo registrado.'
-      });
-    }
-
-    const idUsuario = coincidencias[0].id;
-
-    await pool.query(
-      'UPDATE usuario SET contraseña = SHA2(?, 256) WHERE id = ?',
-      [nuevaPassword, decodificado.id]
-    );
-
-    res.json({ message: 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión.' });
-  } catch (error) {
-    console.error('Error al recuperar contraseña:', error);
-    next(error);
-  }
-});
 
 // POST /logout
 router.post('/logout', (req, res) => {

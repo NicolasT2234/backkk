@@ -21,7 +21,7 @@
 
 const express = require('express');
 const pool = require('../db');
-const { verificarToken, verificarRol } = require('../auth');
+const { verificarToken, verificarRol } = require('../middlewares/auth');
 const PDFDocument = require('pdfkit');
 
 const router = express.Router();

@@ -23,21 +23,9 @@ function NavbarApp({ onLogout }) {
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  let authData = { user: null, logout: null }
-  try {
-    authData = useAuth()
-  } catch (e) {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      try {
-        authData.user = JSON.parse(storedUser)
-      } catch (err) {
-        authData.user = null
-      }
-    }
-  }
+  // Obtener directamente el usuario y la función logout del contexto
+  const { user, logout } = useAuth()
 
-  const { user, logout } = authData
   const userRole = (user?.rol || "").toLowerCase()
   const isAdmin = userRole.includes("admin") || userRole === "administrador"
 
@@ -62,17 +50,14 @@ function NavbarApp({ onLogout }) {
     }
   }
 
-  const handleLogoutAction = () => {
+  // Cierre de sesión centralizado con cookies HttpOnly
+  const handleLogoutAction = async () => {
     if (onLogout) {
-      onLogout()
+      await onLogout()
     } else if (logout) {
-      logout()
-      navigate("/")
-    } else {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      navigate("/")
+      await logout()
     }
+    navigate("/")
   }
 
   // Lista de elementos de navegación dinámica por rol

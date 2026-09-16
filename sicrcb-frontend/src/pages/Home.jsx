@@ -1,13 +1,13 @@
 import { Container, Row, Col, Card, Button, Image } from "react-bootstrap"
 import { useNavigate } from "react-router-dom"
 import {
-  JournalText,
-  Building,
-  ChatLeftText,
+  FileText as JournalText,
+  Building2 as Building,
+  MessageSquareText as ChatLeftText,
   Megaphone,
   ShieldCheck,
   ArrowRight
-} from "react-bootstrap-icons"
+} from "lucide-react"
 import "../assets/css/styles.css"
 import "../assets/css/home.css"
 import Logo from "../assets/img/Logo_SICRCB_dark_bg.png"

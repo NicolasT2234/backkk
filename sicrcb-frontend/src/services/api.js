@@ -19,8 +19,6 @@ api.interceptors.response.use(
       const isAuthCheck = url.includes("/usuarios/me") || url.includes("/auth/login");
 
       if (error.response.status === 401 && !isAuthCheck) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
         window.location.href = "/login";
       }
     }

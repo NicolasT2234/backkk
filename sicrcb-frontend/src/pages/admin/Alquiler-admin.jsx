@@ -14,7 +14,6 @@ import {
     XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../../assets/css/alquiler-admin.css";
 import "../../assets/css/styles.css";
 import BotonReporte from "../../components/BotonReporte.jsx";
@@ -23,7 +22,6 @@ import NavbarApp from "../../components/NavbarApp.jsx";
 import api from "../../services/api.js";
 
 function AlquilerAdmin() {
-    const navigate = useNavigate();
     const [solicitudes, setSolicitudes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("pendiente");
@@ -41,12 +39,6 @@ function AlquilerAdmin() {
     });
     const [guardandoConfig, setGuardandoConfig] = useState(false);
     const [configMsg, setConfigMsg] = useState({ error: "", success: "" });
-
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        navigate("/login");
-    };
 
     const normalizeSolicitudes = payload => {
         if (Array.isArray(payload)) return payload;
@@ -162,7 +154,7 @@ function AlquilerAdmin() {
 
     return (
         <div className="alquiler-page">
-            <NavbarApp onLogout={handleLogout} />
+            <NavbarApp/>
 
             <main className="alquiler-main-container">
                 {/* Banner Superior */}

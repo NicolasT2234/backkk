@@ -13,8 +13,6 @@ const alquileresRoutes = require('./routes/alquileres');
 const multasRoutes = require('./routes/multas');
 const tiposMultaRoutes = require('./routes/tipos_multa');
 const apartamentosRoutes = require('./routes/apartamentos');
-const salonComunalRoutes = require('./routes/salonComunal');
-const sillasRoutes = require('./routes/sillas');
 const dashboardRoutes = require('./routes/dashboard');
 const adminUsuariosRoutes = require('./routes/adminUsuarios'); // <-- Ruta de Administración de Usuarios
 const reportesRoutes = require('./routes/reportes'); // <-- NUEVA: Generación de Reportes en PDF en tiempo real
@@ -59,8 +57,6 @@ app.use('/api/alquileres', alquileresRoutes);
 app.use('/api/multas', multasRoutes);
 app.use('/api/tipos_multa', tiposMultaRoutes);
 app.use('/api/apartamentos', apartamentosRoutes);
-app.use('/api/salon-comunal', salonComunalRoutes);
-app.use('/api/sillas', sillasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin/usuarios', adminUsuariosRoutes);
 app.use('/api/reportes', reportesRoutes); // <-- MONTADA: /api/reportes (Admin y Residente)

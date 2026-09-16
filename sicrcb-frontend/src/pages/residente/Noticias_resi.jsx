@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
 import api from "../../services/api"
 import "../../assets/css/styles.css"
 import "../../assets/css/noticias.css"
@@ -18,17 +17,10 @@ import {
 } from "lucide-react"
 
 function NoticiasResi() {
-  const navigate = useNavigate()
   const [noticias, setNoticias] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [noticiaActiva, setNoticiaActiva] = useState(null)
-
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    navigate("/login")
-  }
 
   const getBackendUrl = () => {
     if (import.meta.env.PROD) {
@@ -83,7 +75,7 @@ function NoticiasResi() {
 
   return (
     <div className="noticias-page">
-      <NavbarApp onLogout={handleLogout} />
+      <NavbarApp/>
 
       <main className="noticias-main-container">
         {/* Banner Superior */}

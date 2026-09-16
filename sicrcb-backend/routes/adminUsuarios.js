@@ -23,7 +23,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
-const { verificarToken, verificarRol } = require('../auth');
+const { verificarToken, verificarRol } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -208,7 +208,7 @@ router.post('/', async (req, res, next) => {
     return res.status(400).json({ error: 'Todos los campos obligatorios y al menos un apartamento deben ser completados.' });
   }
 
-  
+
   if (!REGEX_SOLO_LETRAS.test(String(primerNombre).trim())) {
     return res.status(400).json({ error: 'El primer nombre solo puede contener letras y espacios.' });
   }
@@ -225,7 +225,7 @@ router.post('/', async (req, res, next) => {
     return res.status(400).json({ error: 'El número de documento solo debe contener números.' });
   }
 
-  
+
   if (!REGEX_SOLO_LETRAS.test(String(primerNombre).trim())) {
     return res.status(400).json({ error: 'El primer nombre solo puede contener letras y espacios.' });
   }
