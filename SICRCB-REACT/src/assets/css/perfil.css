@@ -337,11 +337,11 @@
   overflow: hidden;
 }
 
-/* Encabezado limpio de la tarjeta */
+/* Encabezado elegante de la tarjeta con alto contraste y legibilidad */
 .form-card-header {
-  background: #ffffff;
+  background: linear-gradient(135deg, #8c3200 0%, #a83d00 100%) !important;
   padding: 1.5rem 1.75rem;
-  border-bottom: 1px solid #f0e6dd;
+  border-bottom: 1px solid #732900;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -350,16 +350,42 @@
 }
 
 .header-info h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #8c3200;
-  margin: 0 0 0.25rem 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff !important;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.2px;
 }
 
 .header-info p {
-  font-size: 0.86rem;
-  color: #666666;
+  font-size: 0.9rem;
+  color: #ffd0a0 !important;
   margin: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.btn-edit-mode {
+  background: #ffffff !important;
+  color: #8c3200 !important;
+  border: 1.5px solid #ffd0a0 !important;
+  border-radius: 10px;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-edit-mode:hover {
+  background: #ffd0a0 !important;
+  color: #8c3200 !important;
+  border-color: #ffffff !important;
+  transform: translateY(-1px);
 }
 
 .btn-edit-mode {

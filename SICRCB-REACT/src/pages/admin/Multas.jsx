@@ -66,10 +66,17 @@ export default function Multas() {
   const [tipoAEditar, setTipoAEditar] = useState(null)
   const [editTipoMsg, setEditTipoMsg] = useState({ error: "", success: "" })
 
-  // Modal para editar estado de la multa aplicada a residente
+  // Modal para editar información completa de la multa aplicada a residente
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [multaAEditar, setMultaAEditar] = useState(null)
-  const [nuevoEstado, setNuevoEstado] = useState("")
+  const [editFormData, setEditFormData] = useState({
+    nombre: "",
+    descripcion: "",
+    id_tipo_multa: "",
+    idApartamento: "",
+    evidencia: "",
+    estado: "Pendiente"
+  })
   const [modalEditError, setModalEditError] = useState("")
 
   // Modal de confirmación para eliminar multa
@@ -225,10 +232,45 @@ export default function Multas() {
       setMultas((prev) =>
         prev.map((m) => ((m.id === idMulta || m.idMulta === idMulta) ? { ...m, estado: estadoDestino } : m))
       )
-      setEditModalOpen(false)
     } catch (err) {
       console.error("Error al cambiar estado:", err)
       const msg = err.response?.data?.errors?.[0]?.msg || err.response?.data?.error || "Error al actualizar estado"
+      showToast(msg, "error")
+    }
+  }
+
+  const handleAbrirEditarMulta = (m) => {
+    setMultaAEditar(m)
+    setEditFormData({
+      nombre: m.nombre || "",
+      descripcion: m.descripcion || "",
+      id_tipo_multa: m.id_tipo_multa || "",
+      idApartamento: m.id_apartamento || "",
+      evidencia: m.evidencia && m.evidencia !== "Sin evidencia adjunta" ? m.evidencia : "",
+      estado: m.estado || "Pendiente"
+    })
+    setModalEditError("")
+    setEditModalOpen(true)
+  }
+
+  const handleGuardarEdicionMulta = async (e) => {
+    if (e) e.preventDefault()
+    setModalEditError("")
+    const idMulta = multaAEditar.id || multaAEditar._id || multaAEditar.idMulta
+
+    if (!editFormData.nombre.trim() || !editFormData.descripcion.trim() || !editFormData.id_tipo_multa || !editFormData.idApartamento) {
+      setModalEditError("Por favor completa todos los campos obligatorios.")
+      return
+    }
+
+    try {
+      await api.put(`/multas/${idMulta}`, editFormData)
+      showToast("Información de la sanción actualizada exitosamente", "success")
+      setEditModalOpen(false)
+      fetchMultas()
+    } catch (err) {
+      console.error("Error al actualizar sanción:", err)
+      const msg = err.response?.data?.errors?.[0]?.msg || err.response?.data?.error || "Error al actualizar la sanción"
       setModalEditError(msg)
       showToast(msg, "error")
     }
@@ -427,50 +469,110 @@ export default function Multas() {
                               ${Number(m.monto || 0).toLocaleString("es-CO")}
                             </strong>
                           </td>
-                          <td>
-                            {/* Selector rápido de estado en la tabla */}
-                            <select
-                              className="multas-select"
-                              style={{
-                                padding: "0.35rem 0.5rem",
-                                fontSize: "0.82rem",
-                                fontWeight: "700",
-                                borderRadius: "8px",
-                                border: "1px solid var(--multas-border)",
-                                backgroundColor:
-                                  estado === "Resuelta"
-                                    ? "#def7ec"
-                                    : estado === "En proceso"
-                                    ? "#e1effe"
-                                    : "#fef08a",
-                                color:
-                                  estado === "Resuelta"
-                                    ? "#03543f"
-                                    : estado === "En proceso"
-                                    ? "#1e429f"
-                                    : "#713f12",
-                                cursor: "pointer"
-                              }}
-                              value={estado}
-                              onChange={(e) => handleCambiarEstadoMulta(id, e.target.value)}
-                            >
-                              <option value="Pendiente">Pendiente</option>
-                              <option value="En proceso">En proceso</option>
-                              <option value="Resuelta">Resuelta</option>
-                            </select>
+                          <td style={{ minWidth: "155px" }}>
+                            {/* Selector moderno tipo Pill Badge interactivo */}
+                            <div style={{ position: "relative", display: "inline-flex", alignItems: "center", width: "100%", maxWidth: "150px" }}>
+                              <select
+                                style={{
+                                  width: "100%",
+                                  padding: "0.42rem 1.6rem 0.42rem 1.75rem",
+                                  fontSize: "0.82rem",
+                                  fontWeight: "700",
+                                  letterSpacing: "0.2px",
+                                  borderRadius: "30px",
+                                  border:
+                                    estado === "Resuelta"
+                                      ? "1.5px solid #86efac"
+                                      : estado === "En proceso"
+                                      ? "1.5px solid #93c5fd"
+                                      : "1.5px solid #fde047",
+                                  backgroundColor:
+                                    estado === "Resuelta"
+                                      ? "#f0fdf4"
+                                      : estado === "En proceso"
+                                      ? "#eff6ff"
+                                      : "#fefce8",
+                                  color:
+                                    estado === "Resuelta"
+                                      ? "#15803d"
+                                      : estado === "En proceso"
+                                      ? "#1d4ed8"
+                                      : "#a16207",
+                                  cursor: "pointer",
+                                  appearance: "none",
+                                  WebkitAppearance: "none",
+                                  MozAppearance: "none",
+                                  outline: "none",
+                                  transition: "all 0.2s ease",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                                  whiteSpace: "nowrap"
+                                }}
+                                value={estado}
+                                onChange={(e) => handleCambiarEstadoMulta(id, e.target.value)}
+                              >
+                                <option value="Pendiente" style={{ background: "#ffffff", color: "#a16207", fontWeight: "600" }}>
+                                  Pendiente
+                                </option>
+                                <option value="En proceso" style={{ background: "#ffffff", color: "#1d4ed8", fontWeight: "600" }}>
+                                  En proceso
+                                </option>
+                                <option value="Resuelta" style={{ background: "#ffffff", color: "#15803d", fontWeight: "600" }}>
+                                  Resuelta
+                                </option>
+                              </select>
+
+                              {/* Punto de estado indicador a la izquierda */}
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  left: "10px",
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  width: "7px",
+                                  height: "7px",
+                                  borderRadius: "50%",
+                                  backgroundColor:
+                                    estado === "Resuelta"
+                                      ? "#22c55e"
+                                      : estado === "En proceso"
+                                      ? "#3b82f6"
+                                      : "#eab308",
+                                  pointerEvents: "none"
+                                }}
+                              />
+
+                              {/* Flecha Chevron SVG elegante a la derecha */}
+                              <svg
+                                style={{
+                                  position: "absolute",
+                                  right: "9px",
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  pointerEvents: "none",
+                                  width: "12px",
+                                  height: "12px",
+                                  stroke:
+                                    estado === "Resuelta"
+                                      ? "#15803d"
+                                      : estado === "En proceso"
+                                      ? "#1d4ed8"
+                                      : "#a16207",
+                                  strokeWidth: 2.5,
+                                  fill: "none"
+                                }}
+                                viewBox="0 0 24 24"
+                              >
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                            </div>
                           </td>
                           <td>
                             <div className="table-action-btns" style={{ justifyContent: "flex-end" }}>
                               <button
                                 type="button"
                                 className="btn-table-action btn-edit"
-                                title="Editar estado por modal"
-                                onClick={() => {
-                                  setMultaAEditar(m)
-                                  setNuevoEstado(m.estado || "Pendiente")
-                                  setModalEditError("")
-                                  setEditModalOpen(true)
-                                }}
+                                title="Editar información de la sanción"
+                                onClick={() => handleAbrirEditarMulta(m)}
                               >
                                 <Edit2 size={16} />
                               </button>
@@ -903,52 +1005,126 @@ export default function Multas() {
         </div>
       )}
 
-      {/* Modal: Editar Estado Multa Aplicada a Residente */}
+      {/* Modal: Editar Información Completa de la Sanción */}
       {editModalOpen && (
         <div className="sicrcb-modal-backdrop" onClick={() => setEditModalOpen(false)}>
-          <div className="sicrcb-modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="sicrcb-modal-card" style={{ maxWidth: "620px", width: "95%" }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-card-header">
-              <h3>Actualizar Estado de la Sanción</h3>
+              <div>
+                <h3 style={{ margin: "0 0 4px 0" }}>Actualizar Información de la Sanción</h3>
+                <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--multas-text-muted)" }}>
+                  Modifica los datos del motivo, tipo de infracción, ubicación, descripción o estado.
+                </p>
+              </div>
               <button type="button" className="modal-close-btn" onClick={() => setEditModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
-            <div className="modal-card-body">
-              {modalEditError && (
-                <div style={{ padding: "0.65rem", background: "#fde8e8", color: "#9b1c1c", borderRadius: "8px", marginBottom: "1rem", fontSize: "0.85rem", fontWeight: "600" }}>
-                  {modalEditError}
+            <form onSubmit={handleGuardarEdicionMulta}>
+              <div className="modal-card-body" style={{ maxHeight: "72vh", overflowY: "auto", padding: "1.25rem 1.5rem" }}>
+                {modalEditError && (
+                  <div style={{ padding: "0.65rem 0.85rem", background: "#fde8e8", color: "#9b1c1c", borderRadius: "8px", marginBottom: "1rem", fontSize: "0.85rem", fontWeight: "600" }}>
+                    {modalEditError}
+                  </div>
+                )}
+
+                <div className="multas-field-group">
+                  <label className="multas-label">Título / Motivo de la Sanción *</label>
+                  <input
+                    type="text"
+                    className="multas-input"
+                    placeholder="Ej. Ruido excesivo en horas de descanso"
+                    value={editFormData.nombre}
+                    onChange={(e) => setEditFormData({ ...editFormData, nombre: e.target.value })}
+                    required
+                  />
                 </div>
-              )}
-              <p style={{ margin: "0 0 1rem 0", color: "#594234", fontSize: "0.92rem" }}>
-                Selecciona el nuevo estado para: <strong>{multaAEditar?.nombre}</strong>
-              </p>
-              <div className="multas-field-group">
-                <select
-                  className="multas-select"
-                  value={nuevoEstado}
-                  onChange={(e) => setNuevoEstado(e.target.value)}
-                >
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="En proceso">En proceso</option>
-                  <option value="Resuelta">Resuelta</option>
-                </select>
+
+                <div className="multas-grid-2col">
+                  <div className="multas-field-group">
+                    <label className="multas-label">Tipo de Multa Reglamentaria *</label>
+                    <select
+                      className="multas-select"
+                      value={editFormData.id_tipo_multa}
+                      onChange={(e) => setEditFormData({ ...editFormData, id_tipo_multa: e.target.value })}
+                      required
+                    >
+                      <option value="">Selecciona tipo de multa...</option>
+                      {tiposMulta
+                        .filter((t) => t.estado === "Activa" || String(t.id) === String(editFormData.id_tipo_multa))
+                        .map((t) => (
+                          <option key={t.id} value={t.id}>
+                            #{t.numero} - {t.descripcion.substring(0, 35)}... (${Number(t.valor || 0).toLocaleString("es-CO")})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="multas-field-group">
+                    <label className="multas-label">Apartamento / Unidad *</label>
+                    <select
+                      className="multas-select"
+                      value={editFormData.idApartamento}
+                      onChange={(e) => setEditFormData({ ...editFormData, idApartamento: e.target.value })}
+                      required
+                    >
+                      <option value="">Selecciona apartamento...</option>
+                      {apartamentos.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.bloque_nombre || a.bloque || "Torre A"} • Int {a.interior || "1"} • Apto {a.numero}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="multas-field-group">
+                  <label className="multas-label">Descripción de los Hechos *</label>
+                  <textarea
+                    rows={4}
+                    className="multas-textarea"
+                    placeholder="Describe las circunstancias de tiempo, modo y lugar de la infracción..."
+                    value={editFormData.descripcion}
+                    onChange={(e) => setEditFormData({ ...editFormData, descripcion: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="multas-grid-2col">
+                  <div className="multas-field-group">
+                    <label className="multas-label">Enlace o Detalle de Evidencia (Opcional)</label>
+                    <input
+                      type="text"
+                      className="multas-input"
+                      placeholder="Ej. Anotación en libro de portería #210 o URL"
+                      value={editFormData.evidencia}
+                      onChange={(e) => setEditFormData({ ...editFormData, evidencia: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="multas-field-group">
+                    <label className="multas-label">Estado de la Sanción</label>
+                    <select
+                      className="multas-select"
+                      value={editFormData.estado}
+                      onChange={(e) => setEditFormData({ ...editFormData, estado: e.target.value })}
+                    >
+                      <option value="Pendiente">Pendiente</option>
+                      <option value="En proceso">En proceso</option>
+                      <option value="Resuelta">Resuelta</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="modal-card-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setEditModalOpen(false)}>
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn-modal-confirm"
-                onClick={() => {
-                  const id = multaAEditar.id || multaAEditar._id || multaAEditar.idMulta
-                  handleCambiarEstadoMulta(id, nuevoEstado)
-                }}
-              >
-                Guardar Cambios
-              </button>
-            </div>
+              <div className="modal-card-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setEditModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-modal-confirm">
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

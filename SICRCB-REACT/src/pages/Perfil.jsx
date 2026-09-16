@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NavbarApp from "../components/NavbarApp.jsx";
@@ -49,12 +50,12 @@ function Perfil() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    nombres: "",
-    apellidos: "",
-    email: "",
-    numeroDocumento: "",
-    tipoDocumento: "",
-    rol: "",
+    nombres: authUser?.nombres || authUser?.nombre || "",
+    apellidos: authUser?.apellidos || authUser?.apellido || "",
+    email: authUser?.email || "",
+    numeroDocumento: authUser?.numeroDocumento || "",
+    tipoDocumento: authUser?.tipoDocumento || "",
+    rol: authUser?.rol || "",
     contraseña: "",
     confirmarContraseña: ""
   });
@@ -66,15 +67,24 @@ function Perfil() {
     try {
       // 1. Obtener datos del perfil actual
       const response = await api.get("/usuarios/me");
-      const userData = response.data;
-      setUsuario(userData);
+      const userData = response.data || {};
+      const nombresCargados = userData.nombres || userData.nombre || authUser?.nombres || authUser?.nombre || "";
+      const apellidosCargados = userData.apellidos || userData.apellido || authUser?.apellidos || authUser?.apellido || "";
+      
+      const usuarioCompleto = {
+        ...userData,
+        nombres: nombresCargados,
+        apellidos: apellidosCargados
+      };
+      setUsuario(usuarioCompleto);
+
       setFormData({
-        nombres: userData.nombres || "",
-        apellidos: userData.apellidos || "",
-        email: userData.email || "",
+        nombres: nombresCargados,
+        apellidos: apellidosCargados,
+        email: userData.email || authUser?.email || "",
         numeroDocumento: userData.numeroDocumento || "",
         tipoDocumento: userData.tipoDocumento || "",
-        rol: userData.rol || "Residente",
+        rol: userData.rol || authUser?.rol || "Residente",
         contraseña: "",
         confirmarContraseña: ""
       });
@@ -136,6 +146,13 @@ function Perfil() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Validación en tiempo real: Solo letras y espacios para nombres y apellidos
+  const handleNameChange = (e) => {
+    const { name, value } = e.target;
+    const soloLetras = value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, "");
+    setFormData((prev) => ({ ...prev, [name]: soloLetras }));
+  };
+
   const handleCancelEdit = () => {
     if (!usuario) return;
     setFormData({
@@ -177,6 +194,16 @@ function Perfil() {
       return;
     }
 
+    const regexSoloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/;
+    if (!regexSoloLetras.test(formData.nombres.trim())) {
+      setError("El campo Nombres solo debe contener letras (sin números ni caracteres especiales).");
+      return;
+    }
+    if (!regexSoloLetras.test(formData.apellidos.trim())) {
+      setError("El campo Apellidos solo debe contener letras (sin números ni caracteres especiales).");
+      return;
+    }
+
     if (formData.contraseña && formData.contraseña.trim() !== "") {
       if (formData.contraseña.length < 6) {
         setError("La nueva contraseña debe tener mínimo 6 caracteres.");
@@ -200,7 +227,13 @@ function Perfil() {
       }
 
       const response = await api.put("/usuarios/me", payload);
-      const updatedUser = { ...usuario, ...response.data };
+      const resData = response.data || {};
+      const updatedUser = {
+        ...usuario,
+        ...resData,
+        nombres: resData.nombres || payload.nombres,
+        apellidos: resData.apellidos || payload.apellidos
+      };
 
       setUsuario(updatedUser);
       if (setAuthUser) {
@@ -229,10 +262,24 @@ function Perfil() {
     }
   };
 
+  const nombreCompletoMostrar = (() => {
+    const nom = (formData.nombres || usuario?.nombres || authUser?.nombres || "").trim();
+    const ape = (formData.apellidos || usuario?.apellidos || authUser?.apellidos || "").trim();
+    if (nom || ape) {
+      return `${nom} ${ape}`.trim();
+    }
+    return esAdmin ? "Administrador" : "Residente";
+  })();
+
   const getInitials = () => {
-    const primer = (formData.nombres || "U").trim().charAt(0);
-    const segundo = (formData.apellidos || "").trim().charAt(0);
-    return `${primer}${segundo}`.toUpperCase();
+    const nom = (formData.nombres || usuario?.nombres || authUser?.nombres || "").trim();
+    const ape = (formData.apellidos || usuario?.apellidos || authUser?.apellidos || "").trim();
+    if (nom || ape) {
+      const primer = nom.charAt(0) || "";
+      const segundo = ape.charAt(0) || "";
+      return `${primer}${segundo}`.toUpperCase();
+    }
+    return esAdmin ? "A" : "R";
   };
 
   const esAdmin = (formData.rol || "").toLowerCase().includes("admin");
@@ -307,7 +354,7 @@ function Perfil() {
                   </div>
 
                   <h2 className="user-fullname">
-                    {formData.nombres} {formData.apellidos}
+                    {nombreCompletoMostrar}
                   </h2>
                   <p className="user-email">{formData.email}</p>
 
@@ -501,11 +548,13 @@ function Perfil() {
                           id="nombres"
                           type="text"
                           name="nombres"
-                          placeholder="Tus nombres"
+                          placeholder="Tus nombres (solo letras)"
                           className={`form-input ${!isEditing ? "readonly" : ""}`}
                           value={formData.nombres}
-                          onChange={handleChange}
+                          onChange={handleNameChange}
                           disabled={!isEditing || saving}
+                          pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+"
+                          title="Solo se permiten letras y espacios"
                           required
                         />
                       </div>
@@ -518,11 +567,13 @@ function Perfil() {
                           id="apellidos"
                           type="text"
                           name="apellidos"
-                          placeholder="Tus apellidos"
+                          placeholder="Tus apellidos (solo letras)"
                           className={`form-input ${!isEditing ? "readonly" : ""}`}
                           value={formData.apellidos}
-                          onChange={handleChange}
+                          onChange={handleNameChange}
                           disabled={!isEditing || saving}
+                          pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+"
+                          title="Solo se permiten letras y espacios"
                           required
                         />
                       </div>

@@ -18,7 +18,9 @@ import {
   AlertTriangle,
   Armchair,
   Home,
-  Search
+  Search,
+  Ban,
+  Check
 } from "lucide-react";
 import "../../assets/css/styles.css";
 import "../../assets/css/alquiler.css";
@@ -27,6 +29,19 @@ const TIPOS_RESERVA = [
   { id: "salon", label: "Salón Social", desc: "Solo espacio del salón comunal", icon: Home },
   { id: "sillas", label: "Solo Sillas", desc: "Mobiliario y silletería", icon: Armchair },
   { id: "ambos", label: "Salón + Sillas", desc: "Espacio completo y mobiliario", icon: Building }
+];
+
+// 9 Bloques de 1 hora entre las 10:00 y las 19:00
+const BLOQUES_HORARIOS = [
+  { id: 10, inicio: "10:00", fin: "11:00", label: "10:00 a.m. – 11:00 a.m." },
+  { id: 11, inicio: "11:00", fin: "12:00", label: "11:00 a.m. – 12:00 m." },
+  { id: 12, inicio: "12:00", fin: "13:00", label: "12:00 m. – 01:00 p.m." },
+  { id: 13, inicio: "13:00", fin: "14:00", label: "01:00 p.m. – 02:00 p.m." },
+  { id: 14, inicio: "14:00", fin: "15:00", label: "02:00 p.m. – 03:00 p.m." },
+  { id: 15, inicio: "15:00", fin: "16:00", label: "03:00 p.m. – 04:00 p.m." },
+  { id: 16, inicio: "16:00", fin: "17:00", label: "04:00 p.m. – 05:00 p.m." },
+  { id: 17, inicio: "17:00", fin: "18:00", label: "05:00 p.m. – 06:00 p.m." },
+  { id: 18, inicio: "18:00", fin: "19:00", label: "06:00 p.m. – 07:00 p.m." }
 ];
 
 function Alquiler() {
@@ -49,14 +64,25 @@ function Alquiler() {
     return d.toISOString().split("T")[0];
   }, []);
 
-  // Formulario por HORAS en el MISMO DÍA
+  // Parámetros oficiales fijados por el Administrador
+  const [tarifas, setTarifas] = useState({
+    valorHoraSalon: 50000,
+    valorHoraSillas: 20000,
+    totalSillas: 120
+  });
+
+  // Datos de ocupación para el día seleccionado
+  const [ocupacionDia, setOcupacionDia] = useState(null);
+  const [cargandoOcupacion, setCargandoOcupacion] = useState(false);
+
+  // Formulario de reserva
   const [formData, setFormData] = useState({
     descripcion: "",
     tipoAlquiler: "salon",
-    fechaEvento: "",
+    fechaEvento: todayDateString,
     horaInicio: "",
     horaFin: "",
-    valorHora: "50000"
+    cantidadSillas: 10
   });
 
   // Apartamento asociado automático
@@ -80,7 +106,23 @@ function Alquiler() {
   const [fechaHasta, setFechaHasta] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
-  // 1. Cargar apartamento asociado y tarifa sugerida
+  // 1. Cargar tarifas oficiales
+  const fetchTarifas = async () => {
+    try {
+      const res = await api.get("/alquileres/configuracion");
+      if (res.data) {
+        setTarifas({
+          valorHoraSalon: Number(res.data.valorHoraSalon) || 50000,
+          valorHoraSillas: Number(res.data.valorHoraSillas) || 20000,
+          totalSillas: Number(res.data.totalSillas) || 120
+        });
+      }
+    } catch (err) {
+      console.warn("No se pudieron cargar tarifas oficiales del servidor:", err);
+    }
+  };
+
+  // 2. Cargar apartamento asociado al usuario
   useEffect(() => {
     const fetchDatosIniciales = async () => {
       setLoadingApto(true);
@@ -88,7 +130,6 @@ function Alquiler() {
         const resUser = await api.get("/usuarios/me");
         const userData = resUser.data;
 
-        // Asociar apartamento del propietario
         const resAptos = await api.get("/apartamentos");
         if (Array.isArray(resAptos.data)) {
           const miApto = resAptos.data.find(
@@ -109,36 +150,28 @@ function Alquiler() {
             setApartamentoAsociado(resAptos.data[0]);
           }
         }
-
-        // Cargar costo por hora
-        try {
-          const resSalon = await api.get("/salon-comunal");
-          if (Array.isArray(resSalon.data) && resSalon.data.length > 0) {
-            const costoSugerido = resSalon.data[0].costo_hora;
-            if (costoSugerido) {
-              setFormData((prev) => ({
-                ...prev,
-                valorHora: costoSugerido.toString()
-              }));
-            }
-          }
-        } catch (salonErr) {}
       } catch (err) {
-        console.warn("Error al cargar datos iniciales de alquiler:", err);
+        console.warn("Error al cargar datos del usuario/apartamento:", err);
       } finally {
         setLoadingApto(false);
       }
     };
 
     fetchDatosIniciales();
+    fetchTarifas();
   }, []);
 
-  // 2. Cargar historial de alquileres del usuario
+  // 3. Cargar historial de alquileres
   const fetchHistorial = async () => {
     setLoadingHistorial(true);
     try {
-      const res = await api.get("/alquileres/mis-alquileres");
-      setHistorial(Array.isArray(res.data) ? res.data : []);
+      let res;
+      try {
+        res = await api.get("/alquileres/mis-alquileres");
+      } catch (e) {
+        res = await api.get("/alquileres");
+      }
+      setHistorial(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (err) {
       console.error("Error al obtener historial de alquileres:", err);
     } finally {
@@ -148,9 +181,127 @@ function Alquiler() {
 
   useEffect(() => {
     fetchHistorial();
-  }, [success]);
+  }, []);
 
-  // Validación y cálculo de horas en el mismo día
+  // 4. Consultar ocupación cuando cambia la fecha del evento
+  const consultarOcupacion = async (fecha) => {
+    if (!fecha) {
+      setOcupacionDia(null);
+      return;
+    }
+    try {
+      setCargandoOcupacion(true);
+      const res = await api.get("/alquileres/ocupacion", {
+        params: { fecha }
+      });
+      setOcupacionDia(res.data);
+    } catch (err) {
+      console.warn("Error al consultar ocupación del día:", err);
+    } finally {
+      setCargandoOcupacion(false);
+    }
+  };
+
+  useEffect(() => {
+    consultarOcupacion(formData.fechaEvento);
+  }, [formData.fechaEvento]);
+
+  // 5. Valor por hora oficial fijado por la administración (Bloqueado)
+  const valorHoraFijo = useMemo(() => {
+    if (formData.tipoAlquiler === "salon") return tarifas.valorHoraSalon;
+    if (formData.tipoAlquiler === "sillas") return tarifas.valorHoraSillas;
+    if (formData.tipoAlquiler === "ambos") return tarifas.valorHoraSalon + tarifas.valorHoraSillas;
+    return tarifas.valorHoraSalon;
+  }, [formData.tipoAlquiler, tarifas]);
+
+  // Determinar si un bloque horario específico está ocupado en la fecha seleccionada
+  const esBloqueOcupado = (bloque) => {
+    if (!ocupacionDia?.reservasDelDia) return false;
+
+    // Si alquila salón o ambos, revisar exclusividad del salón
+    if (formData.tipoAlquiler === "salon" || formData.tipoAlquiler === "ambos") {
+      const colision = ocupacionDia.reservasDelDia.some((r) => {
+        if (r.id_salon_comunal === null) return false;
+        return bloque.inicio < r.hora_fin && bloque.fin > r.hora_inicio;
+      });
+      if (colision) return true;
+    }
+
+    // Si alquila solo sillas, verificar si quedan sillas
+    if (formData.tipoAlquiler === "sillas") {
+      const franja = ocupacionDia.franjas?.find((f) => f.inicio === bloque.inicio);
+      if (franja && franja.sillasDisponibles <= 0) return true;
+    }
+
+    return false;
+  };
+
+  // Selección de MÚLTIPLES HORAS CONSECUTIVAS de forma dinámica
+  const handleSelectBloque = (bloque) => {
+    if (esBloqueOcupado(bloque)) return;
+
+    // Caso A: No hay selección previa -> este bloque es el punto de inicio (1 hora seleccionada)
+    if (!formData.horaInicio) {
+      setFormData((prev) => ({
+        ...prev,
+        horaInicio: bloque.inicio,
+        horaFin: bloque.fin
+      }));
+      return;
+    }
+
+    const inicioActualH = parseInt(formData.horaInicio.split(":")[0], 10);
+    const clickH = bloque.id;
+
+    // Caso B: El usuario hace clic en el mismo bloque inicial -> deseleccionar / reiniciar
+    if (bloque.inicio === formData.horaInicio && bloque.fin === formData.horaFin) {
+      setFormData((prev) => ({
+        ...prev,
+        horaInicio: "",
+        horaFin: ""
+      }));
+      return;
+    }
+
+    // Caso C: El usuario hace clic en una hora posterior -> extender el rango (MÚLTIPLES HORAS)
+    if (clickH >= inicioActualH) {
+      // Validar que en todo el intervalo [inicioActualH, clickH] no haya ninguna hora ocupada
+      let tieneCruce = false;
+      for (let h = inicioActualH; h <= clickH; h++) {
+        const b = BLOQUES_HORARIOS.find((item) => item.id === h);
+        if (b && esBloqueOcupado(b)) {
+          tieneCruce = true;
+          break;
+        }
+      }
+
+      if (tieneCruce) {
+        setError("El rango seleccionado contiene horas que ya están ocupadas. Elige horas consecutivas disponibles.");
+        setTimeout(() => setError(""), 4000);
+        return;
+      }
+
+      // Rango válido: extiende hasta el fin del bloque clickeado
+      setFormData((prev) => ({
+        ...prev,
+        horaFin: bloque.fin
+      }));
+      return;
+    }
+
+    // Caso D: El usuario hace clic en una hora anterior -> redefinir como nuevo inicio o reiniciar
+    setFormData((prev) => ({
+      ...prev,
+      horaInicio: bloque.inicio,
+      horaFin: bloque.fin
+    }));
+  };
+
+  const limpiarSeleccionHorario = () => {
+    setFormData((prev) => ({ ...prev, horaInicio: "", horaFin: "" }));
+  };
+
+  // Cálculo de duración y costo total
   const calculoReserva = useMemo(() => {
     if (!formData.fechaEvento || !formData.horaInicio || !formData.horaFin) {
       return { horas: 0, total: 0, error: null };
@@ -173,30 +324,17 @@ function Alquiler() {
       return {
         horas: 0,
         total: 0,
-        error: "La hora de finalización debe ser posterior a la hora de inicio (mismo día)."
+        error: "La hora de finalización debe ser posterior a la de inicio."
       };
     }
 
     const horas = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
-    const valorHoraNum = parseFloat(formData.valorHora) || 50000;
-    const total = Math.round(horas * valorHoraNum);
+    const total = Math.round(horas * valorHoraFijo);
 
     return { horas, total, error: null };
-  }, [formData.fechaEvento, formData.horaInicio, formData.horaFin, formData.valorHora]);
+  }, [formData.fechaEvento, formData.horaInicio, formData.horaFin, valorHoraFijo]);
 
-  // Manejo de cambio en hora de inicio (resetea fin si queda inconsistente)
-  const handleHoraInicioChange = (e) => {
-    const nuevaInicio = e.target.value;
-    setFormData((prev) => {
-      let nuevaFin = prev.horaFin;
-      if (nuevaFin && nuevaFin <= nuevaInicio) {
-        nuevaFin = "";
-      }
-      return { ...prev, horaInicio: nuevaInicio, horaFin: nuevaFin };
-    });
-  };
-
-  // Filtrado reactivo por fechas y texto
+  // Filtrado reactivo en tabla
   const historialFiltrado = useMemo(() => {
     return historial.filter((item) => {
       if (!item.hora_inicio) return false;
@@ -239,7 +377,7 @@ function Alquiler() {
     setBusqueda("");
   };
 
-  // Validación de la Regla de 24 horas para cancelación
+  // Regla de 24 horas para cancelación
   const evaluarCancelacion = (horaInicioStr, estado) => {
     if (!horaInicioStr) return { cancelable: false, texto: "Fecha no válida" };
     if (estado?.toLowerCase() === "cancelado") return { cancelable: false, texto: "Cancelado" };
@@ -278,6 +416,7 @@ function Alquiler() {
       setSuccess(`La reserva #${reservaACancelar.id} fue eliminada exitosamente.`);
       setReservaACancelar(null);
       fetchHistorial();
+      consultarOcupacion(formData.fechaEvento);
     } catch (err) {
       console.error("Error al cancelar alquiler:", err);
       const serverMsg =
@@ -306,7 +445,7 @@ function Alquiler() {
       return;
     }
     if (!formData.horaInicio || !formData.horaFin) {
-      setError("Debes indicar las horas de inicio y fin del evento.");
+      setError("Por favor selecciona tu horario de reserva haciendo clic en los bloques horarios.");
       return;
     }
     if (calculoReserva.error) {
@@ -316,7 +455,6 @@ function Alquiler() {
 
     setLoading(true);
     try {
-      // Formato fecha + hora en el mismo día
       const inicioCompleto = `${formData.fechaEvento} ${formData.horaInicio}:00`;
       const finCompleto = `${formData.fechaEvento} ${formData.horaFin}:00`;
 
@@ -324,8 +462,13 @@ function Alquiler() {
         descripcion: formData.descripcion.trim(),
         horaInicio: inicioCompleto,
         horaFin: finCompleto,
+        hora_inicio: inicioCompleto,
+        hora_fin: finCompleto,
         tipoAlquiler: formData.tipoAlquiler,
-        valorHora: parseFloat(formData.valorHora) || 50000
+        tipo_alquiler: formData.tipoAlquiler,
+        cantidadSillas: formData.tipoAlquiler === "salon" ? 0 : Number(formData.cantidadSillas),
+        cantidad_sillas: formData.tipoAlquiler === "salon" ? 0 : Number(formData.cantidadSillas),
+        valorHora: valorHoraFijo
       };
 
       const res = await api.post("/alquileres", payload);
@@ -333,22 +476,27 @@ function Alquiler() {
 
       setSuccess(
         idGenerado
-          ? `¡Reserva creada exitosamente! Número de radicado: #${idGenerado}`
+          ? `¡Reserva creada exitosamente por ${calculoReserva.horas} horas! Radicado: #${idGenerado}`
           : "¡Reserva creada exitosamente!"
       );
 
       setFormData((prev) => ({
         ...prev,
         descripcion: "",
-        fechaEvento: "",
         horaInicio: "",
-        horaFin: ""
+        horaFin: "",
+        cantidadSillas: 10
       }));
+
+      // Refrescar ocupación e historial
+      consultarOcupacion(formData.fechaEvento);
+      fetchHistorial();
     } catch (err) {
       console.error("Error al crear alquiler:", err);
       const serverMsg =
         err.response?.data?.error ||
         err.response?.data?.message ||
+        (Array.isArray(err.response?.data?.errors) ? err.response.data.errors[0]?.msg : null) ||
         "Error al radicar la reserva. Verifica los datos ingresados.";
       setError(serverMsg);
     } finally {
@@ -363,7 +511,7 @@ function Alquiler() {
       <div className="alquiler-page">
         <div className="alquiler-container">
           
-          {/* Encabezado */}
+          {/* Encabezado Original */}
           <header className="alquiler-header">
             <span className="alquiler-badge">Zonas Comunes</span>
             <h1>Alquiler de Salón Comunal</h1>
@@ -401,7 +549,7 @@ function Alquiler() {
             </div>
           )}
 
-          {/* Grid Principal */}
+          {/* Grid Principal en 2 columnas */}
           <div className="alquiler-main-grid">
             
             {/* Formulario de Reserva */}
@@ -411,12 +559,12 @@ function Alquiler() {
                   <Calendar className="header-icon" size={20} />
                   <h2>Nueva Solicitud de Reserva</h2>
                 </div>
-                <span className="step-indicator">Alquiler por horas</span>
+                <span className="step-indicator">10:00 a.m. – 7:00 p.m.</span>
               </div>
 
               <form onSubmit={handleSubmit} className="alquiler-form">
                 
-                {/* 1. Apartamento Asociado */}
+                {/* 1. Apartamento Solicitante */}
                 <div className="form-group">
                   <label className="input-label">Apartamento Solicitante (Asignación Automática)</label>
                   <div className="input-with-icon-static">
@@ -451,7 +599,10 @@ function Alquiler() {
                           type="button"
                           key={tipo.id}
                           className={`btn-tipo-alquiler ${isSelected ? "selected" : ""}`}
-                          onClick={() => setFormData({ ...formData, tipoAlquiler: tipo.id })}
+                          onClick={() => {
+                            setFormData({ ...formData, tipoAlquiler: tipo.id });
+                            limpiarSeleccionHorario();
+                          }}
                         >
                           <IconComponent size={18} />
                           <div className="tipo-alquiler-text">
@@ -464,7 +615,38 @@ function Alquiler() {
                   </div>
                 </div>
 
-                {/* 3. Descripción del Evento */}
+                {/* 3. Cantidad de Sillas si aplica */}
+                {(formData.tipoAlquiler === "sillas" || formData.tipoAlquiler === "ambos") && (
+                  <div className="form-group">
+                    <label className="input-label" htmlFor="cantidadSillas">
+                      Cantidad de Sillas Requeridas <span className="required">*</span>
+                    </label>
+                    <div className="input-with-icon-static">
+                      <Armchair size={17} className="field-inner-icon" />
+                      <input
+                        id="cantidadSillas"
+                        type="number"
+                        min="1"
+                        max={tarifas.totalSillas}
+                        className="form-input with-icon"
+                        value={formData.cantidadSillas}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setFormData({
+                            ...formData,
+                            cantidadSillas: Math.min(val, tarifas.totalSillas)
+                          });
+                        }}
+                        required
+                      />
+                    </div>
+                    <span className="field-hint">
+                      Stock total del conjunto: {tarifas.totalSillas} sillas registradas en inventario.
+                    </span>
+                  </div>
+                )}
+
+                {/* 4. Descripción del Evento */}
                 <div className="form-group">
                   <label className="input-label" htmlFor="descripcion">
                     Descripción o Motivo del Evento <span className="required">*</span>
@@ -473,7 +655,7 @@ function Alquiler() {
                     id="descripcion"
                     rows={3}
                     maxLength={500}
-                    placeholder="Ej. Celebración de cumpleaños familiar, reunión de copropietarios, baby shower..."
+                    placeholder="Ej. Celebración de cumpleaños familiar, reunión de copropietarios..."
                     className="form-input textarea"
                     value={formData.descripcion}
                     onChange={(e) =>
@@ -481,12 +663,9 @@ function Alquiler() {
                     }
                     required
                   />
-                  <span className="field-hint">
-                    Indica el motivo del evento para conocimiento de la administración.
-                  </span>
                 </div>
 
-                {/* 4. FECHA ÚNICA DEL EVENTO (Solo se alquila por horas el mismo día) */}
+                {/* 5. Fecha del Evento */}
                 <div className="form-group">
                   <label className="input-label" htmlFor="fechaEvento">
                     Fecha del Evento <span className="required">*</span>
@@ -499,58 +678,165 @@ function Alquiler() {
                       min={todayDateString}
                       className="form-input with-icon"
                       value={formData.fechaEvento}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fechaEvento: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setFormData({ ...formData, fechaEvento: e.target.value });
+                        limpiarSeleccionHorario();
+                      }}
                       required
                     />
                   </div>
                   <span className="field-hint">
-                    Las reservas se realizan para una sola jornada (mismo día).
+                    Horario oficial de eventos: 10:00 a.m. a 7:00 p.m.
                   </span>
                 </div>
 
-                {/* 5. HORARIOS DE INICIO Y FIN (POR HORAS) */}
-                <div className="form-row-2">
-                  <div className="form-group">
-                    <label className="input-label" htmlFor="horaInicio">
-                      Hora de Inicio <span className="required">*</span>
+                {/* 6. SELECTOR DINÁMICO DE MULTI-HORAS (10:00 AM - 7:00 PM) */}
+                <div className="form-group" style={{ marginTop: "0.25rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
+                    <label className="input-label" style={{ margin: 0 }}>
+                      Selecciona las Horas de tu Reserva <span className="required">*</span>
                     </label>
-                    <div className="input-with-icon-static">
-                      <Clock size={16} className="field-inner-icon" />
-                      <input
-                        id="horaInicio"
-                        type="time"
-                        className="form-input with-icon"
-                        value={formData.horaInicio}
-                        onChange={handleHoraInicioChange}
-                        required
-                      />
-                    </div>
+                    {formData.horaInicio && (
+                      <button
+                        type="button"
+                        onClick={limpiarSeleccionHorario}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#8c3200",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          textDecoration: "underline"
+                        }}
+                      >
+                        Reiniciar selección
+                      </button>
+                    )}
                   </div>
 
-                  <div className="form-group">
-                    <label className="input-label" htmlFor="horaFin">
-                      Hora de Finalización <span className="required">*</span>
-                    </label>
-                    <div className="input-with-icon-static">
-                      <Clock size={16} className="field-inner-icon" />
-                      <input
-                        id="horaFin"
-                        type="time"
-                        min={formData.horaInicio}
-                        className="form-input with-icon"
-                        value={formData.horaFin}
-                        onChange={(e) =>
-                          setFormData({ ...formData, horaFin: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
+                  <p style={{ fontSize: "0.78rem", color: "#735340", margin: "0 0 0.65rem 0" }}>
+                    💡 <em>Tip: Haz clic en la <strong>hora inicial</strong> y luego en la <strong>hora final</strong> para seleccionar 2, 3 o más horas consecutivas.</em>
+                  </p>
+
+                  {/* Cuadrícula interactiva */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                      gap: "0.55rem"
+                    }}
+                  >
+                    {BLOQUES_HORARIOS.map((bloque) => {
+                      const ocupado = esBloqueOcupado(bloque);
+                      
+                      // Bloque seleccionado dentro del rango
+                      const seleccionado =
+                        formData.horaInicio &&
+                        formData.horaFin &&
+                        bloque.inicio >= formData.horaInicio &&
+                        bloque.fin <= formData.horaFin;
+
+                      return (
+                        <button
+                          type="button"
+                          key={bloque.id}
+                          disabled={ocupado}
+                          onClick={() => handleSelectBloque(bloque)}
+                          style={{
+                            padding: "0.7rem 0.5rem",
+                            borderRadius: "10px",
+                            border: ocupado
+                              ? "1.5px solid #fca5a5"
+                              : seleccionado
+                              ? "2px solid #8c3200"
+                              : "1.5px solid #ebdcd0",
+                            background: ocupado
+                              ? "#fee2e2"
+                              : seleccionado
+                              ? "#8c3200"
+                              : "#ffffff",
+                            color: ocupado
+                              ? "#991b1b"
+                              : seleccionado
+                              ? "#ffffff"
+                              : "#2c1203",
+                            cursor: ocupado ? "not-allowed" : "pointer",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "3px",
+                            transition: "all 0.18s ease",
+                            boxShadow: seleccionado ? "0 4px 14px rgba(140, 50, 0, 0.25)" : "none",
+                            opacity: ocupado ? 0.75 : 1
+                          }}
+                        >
+                          <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                            {bloque.inicio} – {bloque.fin}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.7rem",
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              color: ocupado
+                                ? "#991b1b"
+                                : seleccionado
+                                ? "#ffd0a0"
+                                : "#166534"
+                            }}
+                          >
+                            {ocupado ? (
+                              <>
+                                <Ban size={11} />
+                                <span>Ocupado</span>
+                              </>
+                            ) : seleccionado ? (
+                              <>
+                                <Check size={12} />
+                                <span>Seleccionado</span>
+                              </>
+                            ) : (
+                              <span>Disponible</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {/* Resumen dinámico del rango horario */}
+                  {formData.horaInicio && formData.horaFin && (
+                    <div
+                      style={{
+                        marginTop: "0.75rem",
+                        padding: "0.75rem 1rem",
+                        background: "#fdf8f4",
+                        border: "1.5px solid #ffd0a0",
+                        borderRadius: "10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: "0.5rem"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#8c3200" }}>
+                        <Clock size={17} />
+                        <span style={{ fontSize: "0.88rem" }}>
+                          Horario: <strong>{formData.horaInicio} a {formData.horaFin}</strong> ({calculoReserva.horas} {calculoReserva.horas === 1 ? "hora" : "horas"} continuas)
+                        </span>
+                      </div>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#166534", background: "#dcfce7", padding: "3px 10px", borderRadius: "20px" }}>
+                        ✓ Rango Válido
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Aviso cronológico si las horas son erróneas */}
+                {/* Aviso de error en el horario si aplica */}
                 {calculoReserva.error && (
                   <div className="field-error-notice">
                     <AlertCircle size={15} />
@@ -558,43 +844,40 @@ function Alquiler() {
                   </div>
                 )}
 
-                {/* 6. Campo Valor por Hora */}
+                {/* 7. Campo Valor por Hora FIJO (Solo lectura / Bloqueado) */}
                 <div className="form-group">
                   <label className="input-label" htmlFor="valorHora">
-                    Valor por Hora ($ COP) <span className="required">*</span>
+                    Valor por Hora ($ COP) — Tarifa Oficial
                   </label>
                   <div className="input-with-icon-static">
                     <DollarSign size={17} className="field-inner-icon" />
                     <input
                       id="valorHora"
-                      type="number"
-                      step="1000"
-                      min="1000"
-                      placeholder="50000"
-                      className="form-input with-icon"
-                      value={formData.valorHora}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valorHora: e.target.value })
-                      }
-                      required
+                      type="text"
+                      className="form-input locked with-icon"
+                      value={`$ ${valorHoraFijo.toLocaleString("es-CO")} COP / hora`}
+                      readOnly
+                      disabled
                     />
                   </div>
                   <span className="field-hint">
-                    Tarifa por hora fijada para el salón comunal (por defecto $50.000 COP).
+                    {formData.tipoAlquiler === "salon" && "Tarifa fija por hora estipulada para el Salón Comunal."}
+                    {formData.tipoAlquiler === "sillas" && "Tarifa fija por hora estipulada para el préstamo de Sillas."}
+                    {formData.tipoAlquiler === "ambos" && `Tarifa combinada oficial: Salón ($${tarifas.valorHoraSalon.toLocaleString("es-CO")}) + Sillas ($${tarifas.valorHoraSillas.toLocaleString("es-CO")}).`}
                   </span>
                 </div>
 
-                {/* Resumen dinámico del cálculo de horas */}
+                {/* Resumen dinámico del cálculo */}
                 {calculoReserva.horas > 0 && !calculoReserva.error && (
                   <div className="calculation-box">
                     <div className="calc-item">
                       <Clock size={16} />
-                      <span>Duración: <strong>{calculoReserva.horas} horas</strong></span>
+                      <span>Duración: <strong>{calculoReserva.horas} {calculoReserva.horas === 1 ? "hora" : "horas"}</strong></span>
                     </div>
                     <div className="calc-divider"></div>
                     <div className="calc-item">
                       <DollarSign size={16} />
-                      <span>Total estimado: <strong>${calculoReserva.total.toLocaleString("es-CO")} COP</strong></span>
+                      <span>Total: <strong>${calculoReserva.total.toLocaleString("es-CO")} COP</strong></span>
                     </div>
                   </div>
                 )}
@@ -603,7 +886,7 @@ function Alquiler() {
                   <button
                     type="submit"
                     className="btn-submit-alquiler"
-                    disabled={loading || !!calculoReserva.error}
+                    disabled={loading || !formData.horaInicio || !formData.horaFin || !!calculoReserva.error}
                   >
                     <Send size={16} />
                     <span>{loading ? "Procesando reserva..." : "Radicar Reserva"}</span>
@@ -625,22 +908,22 @@ function Alquiler() {
                   <li>
                     <span className="tip-dot"></span>
                     <div>
-                      <strong>Alquiler por horas</strong>
-                      <p>Las reservas se realizan exclusivamente por horas dentro de una misma jornada. No se permite apartar múltiples días continuos.</p>
+                      <strong>Horario permitido estricto</strong>
+                      <p>El salón comunal y las sillas se alquilan exclusivamente entre las <strong>10:00 a.m. y las 7:00 p.m.</strong></p>
+                    </div>
+                  </li>
+                  <li>
+                    <span className="tip-dot"></span>
+                    <div>
+                      <strong>Alquiler por horas en el mismo día</strong>
+                      <p>Las reservas se realizan para una jornada única. Puedes seleccionar 1, 2, 3 o más horas continuas.</p>
                     </div>
                   </li>
                   <li>
                     <span className="tip-dot"></span>
                     <div>
                       <strong>Cuidado del mobiliario</strong>
-                      <p>Las mesas y sillas deben entregarse limpias y ordenadas al finalizar las horas contratadas.</p>
-                    </div>
-                  </li>
-                  <li>
-                    <span className="tip-dot"></span>
-                    <div>
-                      <strong>Horarios permitidos</strong>
-                      <p>El salón puede reservarse hasta un horario máximo de entrega de las 11:00 p.m.</p>
+                      <p>Las mesas y sillas deben entregarse limpias y en perfecto estado al finalizar las horas reservadas.</p>
                     </div>
                   </li>
                 </ul>
@@ -662,7 +945,7 @@ function Alquiler() {
                     </p>
                   </div>
                   <p className="policy-note">
-                    Si faltan menos de 24 horas para el evento (por ejemplo, 3 horas antes), la cancelación se bloqueará automáticamente.
+                    Si faltan menos de 24 horas para el evento, el sistema bloqueará la cancelación automáticamente.
                   </p>
                 </div>
               </div>
@@ -803,7 +1086,6 @@ function Alquiler() {
                       const fechaInicio = item.hora_inicio ? new Date(item.hora_inicio) : null;
                       const fechaFin = item.hora_fin ? new Date(item.hora_fin) : null;
 
-                      // Duración en horas para mostrar en la celda
                       let horasDuracion = 0;
                       if (fechaInicio && fechaFin) {
                         horasDuracion = Math.round(((fechaFin - fechaInicio) / (1000 * 60 * 60)) * 10) / 10;
@@ -822,6 +1104,11 @@ function Alquiler() {
                                 ? "Sillas"
                                 : "Salón"}
                             </span>
+                            {item.cantidad_sillas_alquiladas > 0 && (
+                              <div style={{ fontSize: "0.74rem", color: "#8c3200", fontWeight: "bold" }}>
+                                {item.cantidad_sillas_alquiladas} sillas
+                              </div>
+                            )}
                           </td>
                           <td className="cell-desc">
                             <strong>{item.descripcion}</strong>
@@ -936,7 +1223,6 @@ function Alquiler() {
           </div>
         )}
 
-        {/* Footer Full-Width */}
         <Footer />
       </div>
     </>

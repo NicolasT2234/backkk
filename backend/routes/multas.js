@@ -181,28 +181,75 @@ router.post(
   }
 );
 
-// PUT /multas/:id (Actualizar estado)
+// PUT /multas/:id (Actualizar información completa o estado de la multa)
 router.put(
   '/:id',
   [
-    body('estado').optional().isIn(['Pendiente', 'En proceso', 'Resuelta'])
+    body('nombre').optional().trim().notEmpty().withMessage('El título no puede estar vacío'),
+    body('descripcion').optional().trim().notEmpty().withMessage('La descripción no puede estar vacía'),
+    body('id_tipo_multa').optional().isInt({ gt: 0 }).withMessage('Tipo de multa inválido'),
+    body('idApartamento').optional().isInt({ gt: 0 }).withMessage('Apartamento inválido'),
+    body('id_apartamento').optional().isInt({ gt: 0 }).withMessage('Apartamento inválido'),
+    body('estado').optional().isIn(['Pendiente', 'En proceso', 'Resuelta']).withMessage('Estado inválido')
   ],
   verificarToken,
   verificarRol('Administrador'),
   async (req, res) => {
-    const { id } = req.params;
-    const { estado } = req.body;
-
-    if (!estado) {
-      return res.status(400).json({ error: 'Debe especificar el nuevo estado' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
     }
 
+    const { id } = req.params;
+    const { nombre, descripcion, id_tipo_multa, idApartamento, id_apartamento, evidencia, estado } = req.body;
+
+    const targetApartamento = idApartamento !== undefined ? idApartamento : id_apartamento;
+
     try {
-      await pool.query('UPDATE multa SET estado = ? WHERE id = ?', [estado.trim(), id]);
-      res.json({ message: 'Estado actualizado exitosamente' });
+      const [existente] = await pool.query('SELECT id FROM multa WHERE id = ?', [id]);
+      if (existente.length === 0) {
+        return res.status(404).json({ error: 'La sanción especificada no existe' });
+      }
+
+      const updates = [];
+      const values = [];
+
+      if (nombre !== undefined) {
+        updates.push('nombre = ?');
+        values.push(nombre.trim());
+      }
+      if (descripcion !== undefined) {
+        updates.push('descripcion = ?');
+        values.push(descripcion.trim());
+      }
+      if (id_tipo_multa !== undefined) {
+        updates.push('id_tipo_multa = ?');
+        values.push(parseInt(id_tipo_multa, 10));
+      }
+      if (targetApartamento !== undefined) {
+        updates.push('id_apartamento = ?');
+        values.push(parseInt(targetApartamento, 10));
+      }
+      if (evidencia !== undefined) {
+        updates.push('evidencia = ?');
+        values.push(evidencia ? evidencia.trim() : 'Sin evidencia adjunta');
+      }
+      if (estado !== undefined) {
+        updates.push('estado = ?');
+        values.push(estado.trim());
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ error: 'Debe especificar al menos un campo para actualizar' });
+      }
+
+      values.push(id);
+
+      await pool.query(`UPDATE multa SET ${updates.join(', ')} WHERE id = ?`, values);
+      res.json({ message: 'Información de la sanción actualizada exitosamente' });
     } catch (error) {
-      console.error('Error al actualizar estado:', error);
-      res.status(500).json({ error: 'Error al actualizar estado en la base de datos' });
+      console.error('Error al actualizar multa:', error);
+      res.status(500).json({ error: error.sqlMessage || 'Error al actualizar la sanción en la base de datos' });
     }
   }
 );

@@ -43,10 +43,10 @@ router.get('/me', verificarToken, async (req, res, next) => {
   try {
     const [usuarios] = await pool.query(
       `SELECT u.id, u.email, r.nombre as rol,
-              ud.primer_nombre as nombres,
-              ud.primer_nombre as nombre,
-              ud.primer_apellido as apellidos,
-              ud.primer_apellido as apellido,
+              COALESCE(ud.primer_nombre, '') as nombres,
+              COALESCE(ud.primer_nombre, '') as nombre,
+              COALESCE(ud.primer_apellido, '') as apellidos,
+              COALESCE(ud.primer_apellido, '') as apellido,
               ud.numero_documento as numeroDocumento,
               td.nombre_documento as tipoDocumento
        FROM usuario u
@@ -72,8 +72,16 @@ router.get('/me', verificarToken, async (req, res, next) => {
 // PUT /usuarios/me (cualquier usuario autenticado edita su propio perfil)
 router.put('/me',
   [
-    body('nombres').optional().trim().notEmpty().withMessage('Nombre no puede estar vacío'),
-    body('apellidos').optional().trim().notEmpty().withMessage('Apellido no puede estar vacío'),
+    body('nombres')
+      .optional()
+      .trim()
+      .notEmpty().withMessage('Nombre no puede estar vacío')
+      .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/).withMessage('El nombre solo debe contener letras y espacios'),
+    body('apellidos')
+      .optional()
+      .trim()
+      .notEmpty().withMessage('Apellido no puede estar vacío')
+      .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/).withMessage('El apellido solo debe contener letras y espacios'),
     body('contraseña').optional().trim().isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres')
   ],
   verificarToken, async (req, res, next) => {
@@ -97,24 +105,42 @@ router.put('/me',
         );
       }
 
-      // 2. Actualizar nombres y apellidos en user_data
-      const userDataUpdates = [];
-      const userDataValues = [];
+      // 2. Actualizar o insertar nombres y apellidos en user_data (UPSERT para garantizar soporte a Administradores)
+      const [existingUserData] = await connection.query(
+        'SELECT id FROM user_data WHERE id_usuario = ?',
+        [idUsuario]
+      );
 
-      if (nombres) {
-        userDataUpdates.push('primer_nombre = ?');
-        userDataValues.push(nombres);
-      }
-      if (apellidos) {
-        userDataUpdates.push('primer_apellido = ?');
-        userDataValues.push(apellidos);
-      }
+      if (existingUserData.length > 0) {
+        const userDataUpdates = [];
+        const userDataValues = [];
 
-      if (userDataUpdates.length > 0) {
-        userDataValues.push(idUsuario);
+        if (nombres) {
+          userDataUpdates.push('primer_nombre = ?');
+          userDataValues.push(nombres.trim());
+        }
+        if (apellidos) {
+          userDataUpdates.push('primer_apellido = ?');
+          userDataValues.push(apellidos.trim());
+        }
+
+        if (userDataUpdates.length > 0) {
+          userDataValues.push(idUsuario);
+          await connection.query(
+            `UPDATE user_data SET ${userDataUpdates.join(', ')} WHERE id_usuario = ?`,
+            userDataValues
+          );
+        }
+      } else {
+        // Si no existía registro en user_data (caso de cuenta Administrador inicial), se inserta automáticamente
+        const [tipoDocRows] = await connection.query(
+          "SELECT id FROM tipo_documento WHERE estado = 'Activo' LIMIT 1"
+        );
+        const idTipoDoc = tipoDocRows.length > 0 ? tipoDocRows[0].id : 1;
         await connection.query(
-          `UPDATE user_data SET ${userDataUpdates.join(', ')} WHERE id_usuario = ?`,
-          userDataValues
+          `INSERT INTO user_data (numero_documento, primer_nombre, primer_apellido, id_usuario, id_tipo_documento)
+           VALUES (?, ?, ?, ?, ?)`,
+          [0, (nombres || 'Admin').trim(), (apellidos || 'Principal').trim(), idUsuario, idTipoDoc]
         );
       }
 
@@ -123,10 +149,10 @@ router.put('/me',
       // 3. Devolver perfil actualizado
       const [usuarios] = await pool.query(
         `SELECT u.id, u.email, r.nombre as rol,
-                ud.primer_nombre as nombres,
-                ud.primer_nombre as nombre,
-                ud.primer_apellido as apellidos,
-                ud.primer_apellido as apellido,
+                COALESCE(ud.primer_nombre, '') as nombres,
+                COALESCE(ud.primer_nombre, '') as nombre,
+                COALESCE(ud.primer_apellido, '') as apellidos,
+                COALESCE(ud.primer_apellido, '') as apellido,
                 ud.numero_documento as numeroDocumento,
                 td.nombre_documento as tipoDocumento
          FROM usuario u
@@ -155,10 +181,10 @@ router.get('/:id', verificarToken, verificarRol('Administrador'), async (req, re
     const { id } = req.params;
     const [usuarios] = await pool.query(
       `SELECT u.id, u.email, r.nombre as rol,
-              ud.primer_nombre as nombres,
-              ud.primer_nombre as nombre,
-              ud.primer_apellido as apellidos,
-              ud.primer_apellido as apellido,
+              COALESCE(ud.primer_nombre, '') as nombres,
+              COALESCE(ud.primer_nombre, '') as nombre,
+              COALESCE(ud.primer_apellido, '') as apellidos,
+              COALESCE(ud.primer_apellido, '') as apellido,
               ud.numero_documento as numeroDocumento,
               td.nombre_documento as tipoDocumento
        FROM usuario u

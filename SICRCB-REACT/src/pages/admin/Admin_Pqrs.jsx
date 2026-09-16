@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+﻿﻿import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import NavbarApp from "../../components/NavbarApp.jsx";
@@ -276,20 +276,38 @@ function PqrsAdmin() {
 
     return historial
       .filter((pqr) => {
-        const estadoObj = getEstadoInfo(pqr.estado);
-        const coincideEstado =
-          filtroEstado === "Todos" ||
-          estadoObj.key.toLowerCase() === filtroEstado.toLowerCase();
+        const estadoInfo = getEstadoInfo(pqr.estado);
+        const estadoKey = (estadoInfo.key || "").toLowerCase();
+        const fEstado = (filtroEstado || "Todos").toLowerCase();
 
-        const tipoObj = getTipoInfo(pqr.tipo || pqr.asunto);
-        const coincideTipo =
-          filtroTipo === "Todos" ||
-          tipoObj.label.toLowerCase() === filtroTipo.toLowerCase();
+        // Filtro de Estado robusto
+        const coincideEstado = (() => {
+          if (fEstado === "todos") return true;
+          if (fEstado.includes("pendient")) return estadoKey.includes("pendient");
+          if (fEstado.includes("proceso")) return estadoKey.includes("proceso");
+          if (fEstado.includes("resuelt")) return estadoKey.includes("resuelt");
+          if (fEstado.includes("rechaz")) return estadoKey.includes("rechaz");
+          return estadoKey === fEstado;
+        })();
 
+        // Filtro de Tipo robusto
+        const tipoInfo = getTipoInfo(pqr.tipo || pqr.asunto);
+        const tipoLabel = (tipoInfo.label || "").toLowerCase();
+        const fTipo = (filtroTipo || "Todos").toLowerCase();
+        const coincideTipo = (() => {
+          if (fTipo === "todos") return true;
+          if (fTipo.includes("petic")) return tipoLabel.includes("petic");
+          if (fTipo.includes("queja")) return tipoLabel.includes("queja");
+          if (fTipo.includes("reclam")) return tipoLabel.includes("reclam");
+          if (fTipo.includes("suger")) return tipoLabel.includes("suger");
+          return tipoLabel === fTipo;
+        })();
+
+        // Búsqueda de texto libre
         const id = getId(pqr).toString().toLowerCase();
         const residente = getNombreResidente(pqr).toLowerCase();
         const descripcion = (pqr.descripcion || "").toLowerCase();
-        const tipoStr = tipoObj.label.toLowerCase();
+        const tipoStr = (pqr.tipo || "").toLowerCase();
         const bloque = (pqr.bloque || "").toLowerCase();
         const numeroApto = (pqr.numero || "").toString().toLowerCase();
 
@@ -473,7 +491,11 @@ function PqrsAdmin() {
           <section className="stats-grid" aria-label="Estadísticas de PQRS">
             <div
               className={`stat-card ${filtroEstado === "Todos" ? "active-stat" : ""}`}
-              onClick={() => setFiltroEstado("Todos")}
+              onClick={() => {
+                setFiltroEstado("Todos");
+                setPaginaActual(1);
+              }}
+              style={{ cursor: "pointer" }}
               role="button"
               tabIndex={0}
             >
@@ -488,7 +510,11 @@ function PqrsAdmin() {
 
             <div
               className={`stat-card ${filtroEstado === "Pendiente" ? "active-stat" : ""}`}
-              onClick={() => setFiltroEstado(filtroEstado === "Pendiente" ? "Todos" : "Pendiente")}
+              onClick={() => {
+                setFiltroEstado("Pendiente");
+                setPaginaActual(1);
+              }}
+              style={{ cursor: "pointer" }}
               role="button"
               tabIndex={0}
             >
@@ -503,7 +529,11 @@ function PqrsAdmin() {
 
             <div
               className={`stat-card ${filtroEstado === "En proceso" ? "active-stat" : ""}`}
-              onClick={() => setFiltroEstado(filtroEstado === "En proceso" ? "Todos" : "En proceso")}
+              onClick={() => {
+                setFiltroEstado("En proceso");
+                setPaginaActual(1);
+              }}
+              style={{ cursor: "pointer" }}
               role="button"
               tabIndex={0}
             >
@@ -518,7 +548,11 @@ function PqrsAdmin() {
 
             <div
               className={`stat-card ${filtroEstado === "Resuelta" ? "active-stat" : ""}`}
-              onClick={() => setFiltroEstado(filtroEstado === "Resuelta" ? "Todos" : "Resuelta")}
+              onClick={() => {
+                setFiltroEstado("Resuelta");
+                setPaginaActual(1);
+              }}
+              style={{ cursor: "pointer" }}
               role="button"
               tabIndex={0}
             >
@@ -709,7 +743,7 @@ function PqrsAdmin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {itemsPaginados.map((pqr) => {
+                      {itemsPaginados.map((pqr, index) => {
                         const id = getId(pqr);
                         const tipoInfo = getTipoInfo(pqr.tipo || pqr.asunto);
                         const TipoIcon = tipoInfo.icon;
@@ -717,7 +751,7 @@ function PqrsAdmin() {
                         const EstadoIcon = estadoInfo.icon;
 
                         return (
-                          <tr key={id}>
+                          <tr key={`pqr-row-${id}-${index}`}>
                             <td>
                               <span className="id-badge">#{id}</span>
                             </td>
@@ -807,7 +841,7 @@ function PqrsAdmin() {
                 </div>
 
                 <div className="mobile-cards-list">
-                  {itemsPaginados.map((pqr) => {
+                  {itemsPaginados.map((pqr, index) => {
                     const id = getId(pqr);
                     const tipoInfo = getTipoInfo(pqr.tipo || pqr.asunto);
                     const TipoIcon = tipoInfo.icon;
@@ -815,7 +849,7 @@ function PqrsAdmin() {
                     const EstadoIcon = estadoInfo.icon;
 
                     return (
-                      <div key={id} className="mobile-pqr-card">
+                      <div key={`pqr-card-${id}-${index}`} className="mobile-pqr-card">
                         <div className="mobile-card-header">
                           <span className="id-badge">#{id}</span>
                           <span className={`tipo-pill ${tipoInfo.className}`}>

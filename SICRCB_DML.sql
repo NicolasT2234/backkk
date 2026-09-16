@@ -5,7 +5,7 @@ INSERT INTO rol (nombre)
 VALUES 
 ('Administrador'),
 ('Propietario');
-
+SELECT * FROM usuario;
 -- USUARIOS
 INSERT INTO usuario (contraseña,email,estado,image_url)
 VALUES
@@ -21,6 +21,8 @@ VALUES
 (sha2('prop108', 256),'valentina.castro@gmail.com','Activo','valentina.jpg'),
 (sha2('prop109', 256),'felipe.herrera@gmail.com','Activo','felipe.jpg'),
 (sha2('prop110', 256),'natalia.reyes@gmail.com','Inactivo','natalia.jpg');
+
+USE SICRCB;
 
 
 -- ROL USUARIO
@@ -209,6 +211,8 @@ INSERT INTO salon_comunal (estado)
 VALUES
 ('Disponible');
 
+
+SHOW TABLES LIKE '%pqr%';
 -- ALQUILER
 INSERT INTO alquiler
 (id_propietario,id_salon_comunal,descripcion,hora_inicio,hora_fin,valor_hora,estado)
@@ -253,3 +257,12 @@ VALUES
 (5,'Multa por daños','Daños ocasionados al ascensor','En proceso',5,2,1,'ascensor_daño.mp4'),
 (6,'Multa por ruido','Música con volumen elevado después de las 10 PM','Pendiente',6,3,1,'ruido_noche.jpg'),
 (7,'Multa por basura','Desechos fuera del horario permitido','Resuelta',7,1,1,'basura_pasillo.png');
+
+
+INSERT INTO salon_comunal (id, estado, valor_hora)
+VALUES (1, 'Disponible', 50000)
+ON DUPLICATE KEY UPDATE valor_hora = VALUES(valor_hora);
+
+INSERT INTO silla (id, cantidad, estado, valor_hora)
+VALUES (1, 120, 'Disponible', 20000)
+ON DUPLICATE KEY UPDATE cantidad = VALUES(cantidad), valor_hora = VALUES(valor_hora);

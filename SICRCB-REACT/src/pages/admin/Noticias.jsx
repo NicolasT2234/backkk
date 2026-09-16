@@ -16,7 +16,10 @@ import {
   FileText,
   X,
   CheckCircle2,
-  BellRing
+  BellRing,
+  Eye,
+  ExternalLink,
+  Image as ImageIcon
 } from "lucide-react"
 
 function Noticias() {
@@ -37,6 +40,38 @@ function Noticias() {
   // Modal de confirmación para eliminar
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [idToDelete, setIdToDelete] = useState(null)
+
+  // Modal para ver noticia e imagen completa en grande
+  const [noticiaActiva, setNoticiaActiva] = useState(null)
+
+  const getBackendUrl = () => {
+    if (import.meta.env.PROD) {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+      return apiUrl.replace(/\/api$/, "")
+    }
+    return "http://localhost:5000"
+  }
+
+  const getArchivoUrl = (n) => {
+    const archivo = n?.archivo_url || n?.archivoUrl || n?.archivo || n?.imagenUrl || n?.imagen || null
+    if (archivo) {
+      if (archivo.startsWith("http://") || archivo.startsWith("https://")) {
+        return archivo
+      }
+      return `${getBackendUrl()}${archivo.startsWith('/') ? '' : '/'}${archivo}`
+    }
+    return null
+  }
+
+  const esImagen = (url) => {
+    if (!url) return false
+    return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url)
+  }
+
+  const esPdf = (url) => {
+    if (!url) return false
+    return /\.pdf(\?.*)?$/i.test(url)
+  }
 
   const handleLogout = async () => {
     try {
@@ -188,10 +223,31 @@ function Noticias() {
                 {noticiasFiltradas.map((n) => {
                   const id = n.id || n._id || n.idNoticia
                   const desc = n.descripcion || n.contenido || ""
-                  const fecha = n.fechaPublicacion || n.fechaEnvio
+                  const fecha = n.fechaPublicacion || n.fechaEnvio || n.fecha_publicacion
+                  const archivoUrl = getArchivoUrl(n)
+                  const tieneImg = esImagen(archivoUrl)
 
                   return (
                     <div key={id} className="sicrcb-news-card">
+                      {/* Cabecera con Imagen de la Noticia o Placeholder */}
+                      <div
+                        className="news-card-media"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setNoticiaActiva(n)}
+                        title="Clic para ver detalle e imagen completa"
+                      >
+                        {tieneImg ? (
+                          <img src={archivoUrl} alt="Noticia" />
+                        ) : (
+                          <div className="news-media-placeholder">
+                            {esPdf(archivoUrl) ? <FileText size={38} /> : <Newspaper size={38} />}
+                            <span style={{ fontSize: "0.78rem", fontWeight: "700" }}>
+                              {esPdf(archivoUrl) ? "Documento PDF" : "Casa Blanca"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="news-card-body">
                         <div className="news-meta-row">
                           <span className="news-badge">Oficial Casa Blanca</span>
@@ -206,8 +262,46 @@ function Noticias() {
                       </div>
 
                       <div className="news-card-footer">
-                        <small style={{ color: "#735340" }}>ID: #{id}</small>
-                        <div className="news-admin-actions">
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <small style={{ color: "#735340", fontWeight: "600" }}>ID: #{id}</small>
+                          {archivoUrl && (
+                            <span
+                              style={{
+                                fontSize: "0.74rem",
+                                padding: "2px 8px",
+                                borderRadius: "10px",
+                                backgroundColor: tieneImg ? "#fff7ed" : "#f0fdf4",
+                                color: tieneImg ? "#c2410c" : "#166534",
+                                border: `1px solid ${tieneImg ? "#fed7aa" : "#bbf7d0"}`,
+                                fontWeight: "600"
+                              }}
+                            >
+                              {tieneImg ? "Con Imagen" : "PDF Adjunto"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="news-admin-actions" style={{ display: "flex", gap: "6px" }}>
+                          {/* Botón ver imagen/detalle */}
+                          <button
+                            type="button"
+                            className="btn-news-action"
+                            style={{
+                              background: "rgba(140,50,0,0.08)",
+                              color: "#8C3200",
+                              border: "none",
+                              borderRadius: "8px",
+                              padding: "6px",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center"
+                            }}
+                            title="Ver Noticia Completa con Imagen"
+                            onClick={() => setNoticiaActiva(n)}
+                          >
+                            <Eye size={16} />
+                          </button>
+
+                          {/* Botón Eliminar */}
                           <button
                             type="button"
                             className="btn-news-action delete"
@@ -287,6 +381,16 @@ function Noticias() {
                       style={{ fontSize: "0.82rem", color: "#735340" }}
                     />
                   </div>
+
+                  {formData.selectedFile && formData.selectedFile.type && formData.selectedFile.type.startsWith("image/") && (
+                    <div style={{ marginTop: "0.85rem", borderRadius: "12px", overflow: "hidden", maxWidth: "260px", border: "1.5px solid #fed7aa", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <img
+                        src={URL.createObjectURL(formData.selectedFile)}
+                        alt="Vista previa seleccionada"
+                        style={{ width: "100%", height: "auto", display: "block" }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <button type="submit" className="btn-publish-submit">
@@ -333,6 +437,61 @@ function Noticias() {
               >
                 Eliminar Noticia
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para ver noticia completa con imagen ampliada */}
+      {noticiaActiva && (
+        <div className="sicrcb-news-modal-backdrop" onClick={() => setNoticiaActiva(null)}>
+          <div className="sicrcb-news-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="news-modal-header">
+              <h3 style={{ margin: 0 }}>Comunicado Oficial Casa Blanca</h3>
+              <button
+                type="button"
+                onClick={() => setNoticiaActiva(null)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#8C3200" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="news-modal-body">
+              {getArchivoUrl(noticiaActiva) && esImagen(getArchivoUrl(noticiaActiva)) && (
+                <div style={{ marginBottom: "1.25rem", borderRadius: "12px", overflow: "hidden", maxHeight: "380px", border: "1px solid rgba(140,50,0,0.15)" }}>
+                  <img
+                    src={getArchivoUrl(noticiaActiva)}
+                    alt="Imagen de la noticia"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "1rem", color: "#735340", fontSize: "0.82rem", marginBottom: "1.25rem" }}>
+                <span>Fecha: {new Date(noticiaActiva.fechaPublicacion || noticiaActiva.fecha_publicacion || Date.now()).toLocaleDateString()}</span>
+                <span>·</span>
+                <span>Publicado por: Administrador</span>
+              </div>
+
+              <div className="news-modal-text" style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#2C1203", whiteSpace: "pre-wrap" }}>
+                {noticiaActiva.descripcion || noticiaActiva.contenido}
+              </div>
+
+              {getArchivoUrl(noticiaActiva) && esPdf(getArchivoUrl(noticiaActiva)) && (
+                <div style={{ marginTop: "1.5rem", padding: "1rem", background: "#fff8f2", borderRadius: "12px", border: "1px solid rgba(140,50,0,0.15)" }}>
+                  <a
+                    href={getArchivoUrl(noticiaActiva)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#8C3200", fontWeight: "700", textDecoration: "none" }}
+                  >
+                    <FileText size={18} />
+                    <span>Ver documento adjunto oficial (PDF)</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>

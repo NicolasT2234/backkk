@@ -286,6 +286,23 @@ CREATE TABLE noticia(
  ON UPDATE CASCADE
 );
 
+ALTER TABLE multa ADD COLUMN fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE alquiler_silla 
+ADD COLUMN cantidad INT NOT NULL;
+
+USE SICRCB;
+
+-- Agrega la tarifa por hora propia de las sillas
+ALTER TABLE silla 
+ADD COLUMN valor_hora INT NOT NULL DEFAULT 20000;
+
+ALTER TABLE salon_comunal 
+ADD COLUMN valor_hora INT NOT NULL DEFAULT 50000;
+
+ALTER TABLE alquiler_silla 
+ADD COLUMN cantidad INT NOT NULL DEFAULT 0;
+
   --  CHECK'S
 ALTER TABLE usuario 
 ADD CONSTRAINT chk_usuario_estado CHECK (estado IN ('Activo','Inactivo'));

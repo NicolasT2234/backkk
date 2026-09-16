@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -24,12 +24,29 @@ import {
 import "../../assets/css/styles.css";
 import "../../assets/css/dashboardAdmin.css";
 
+// Formateador de tiempo relativo para la actividad
+function formatRelativeTime(dateString) {
+  if (!dateString) return "Hace un momento";
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffMinutes = Math.floor((now - past) / 60000);
+
+  if (diffMinutes < 1) return "Hace unos segundos";
+  if (diffMinutes < 60) return `Hace ${diffMinutes} ${diffMinutes === 1 ? "minuto" : "minutos"}`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `Hace ${diffHours} ${diffHours === 1 ? "hora" : "horas"}`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `Hace ${diffDays} ${diffDays === 1 ? "día" : "días"}`;
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSync, setLastSync] = useState(new Date().toLocaleTimeString());
 
-  // Estadísticas del dashboard
+  // Métricas del dashboard
   const [stats, setStats] = useState({
     alquileresActivos: 0,
     multasPendientes: 0,
@@ -37,27 +54,55 @@ function Dashboard() {
     totalPropietarios: 0
   });
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get("/dashboard/estadisticas");
-        if (res.data) {
-          setStats({
-            alquileresActivos: res.data.alquileresActivos || 0,
-            multasPendientes: res.data.multasPendientes || 0,
-            pqrsPendientes: res.data.pqrsPendientes || 0,
-            totalPropietarios: res.data.totalPropietarios || 0
-          });
-        }
-      } catch (err) {
-        console.error("Error al obtener estadísticas del dashboard:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Actividad y estado del sistema
+  const [actividades, setActividades] = useState([]);
+  const [systemStatus, setSystemStatus] = useState({
+    apiOk: true,
+    dbOk: true,
+    dbLatencyMs: 0
+  });
 
-    fetchStats();
+  const fetchDashboardData = useCallback(async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const res = await api.get("/dashboard/estadisticas");
+      if (res.data) {
+        const m = res.data.metricas || res.data;
+        setStats({
+          alquileresActivos: m.alquileresActivos || 0,
+          multasPendientes: m.multasPendientes || 0,
+          pqrsPendientes: m.pqrsPendientes || 0,
+          totalPropietarios: m.totalPropietarios || 0
+        });
+
+        if (res.data.actividadReciente) {
+          setActividades(res.data.actividadReciente);
+        }
+
+        if (res.data.sistema) {
+          setSystemStatus(res.data.sistema);
+        }
+
+        setLastSync(new Date().toLocaleTimeString());
+      }
+    } catch (err) {
+      console.error("Error al sincronizar dashboard:", err);
+      setSystemStatus((prev) => ({ ...prev, apiOk: false, dbOk: false }));
+    } finally {
+      setLoading(false);
+      if (isManual) setRefreshing(false);
+    }
   }, []);
+
+  // Polling automático cada 10 segundos
+  useEffect(() => {
+    fetchDashboardData();
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
 
   const handleLogout = async () => {
     if (logout) {
@@ -70,6 +115,20 @@ function Dashboard() {
     user?.rol?.toLowerCase().includes("admin") ||
     user?.rol?.toLowerCase() === "administrador";
 
+  const renderActivityIcon = (tipo) => {
+    switch (tipo) {
+      case "multa":
+        return <FileText size={18} />;
+      case "pqr":
+        return <MessageSquare size={18} />;
+      case "alquiler":
+        return <MapPin size={18} />;
+      case "residente":
+      default:
+        return <User size={18} />;
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-page">
@@ -80,7 +139,7 @@ function Dashboard() {
               <h1>
                 <Home size={32} /> SICRCB Dashboard
               </h1>
-              <p>Cargando panel de control y métricas del sistema...</p>
+              <p>Conectando en tiempo real con Casa Blanca...</p>
             </div>
             <RotateCw size={28} className="spinning" color="#FFD0A0" />
           </div>
@@ -94,7 +153,6 @@ function Dashboard() {
       <NavbarApp onLogout={handleLogout} />
 
       <main className="dashboard-main-content">
-        
         {/* BANNER PRINCIPAL (HERO) */}
         <div className="sicrcb-dash-hero">
           <div className="dash-hero-text">
@@ -103,15 +161,35 @@ function Dashboard() {
             </h1>
             <p>Panel de control administrativo y gestión comunitaria de Casa Blanca</p>
           </div>
-          <div className="dash-hero-badge">
-            <Server size={16} /> Servidor y Base de Datos Operativos
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              onClick={() => fetchDashboardData(true)}
+              style={{
+                background: "rgba(0,0,0,0.25)",
+                border: "1px solid rgba(255, 208, 160, 0.4)",
+                color: "#ffd0a0",
+                padding: "0.5rem 0.85rem",
+                borderRadius: "20px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.85rem",
+                fontWeight: 600
+              }}
+              title="Actualizar métricas ahora"
+            >
+              <RotateCw size={15} className={refreshing ? "spinning" : ""} />
+              {refreshing ? "Sincronizando..." : "Sincronizar"}
+            </button>
+            <div className="dash-hero-badge">
+              <Server size={16} /> Servidor y Base de Datos Operativos
+            </div>
           </div>
         </div>
 
-        {/* GRID DE MÉTRICAS / KPIS (4 COLUMNAS) */}
+        {/* GRID DE MÉTRICAS (KPIS) */}
         <section className="sicrcb-dash-kpis">
-          
-          {/* KPI 1: Alquileres Activos */}
           <div className="dash-kpi-card" onClick={() => navigate("/alquiler")}>
             <div className="kpi-icon-box">
               <Home size={26} />
@@ -123,7 +201,6 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* KPI 2: Multas Pendientes */}
           <div className="dash-kpi-card" onClick={() => navigate("/multas")}>
             <div className="kpi-icon-box kpi-warning">
               <FileText size={26} />
@@ -135,7 +212,6 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* KPI 3: Propietarios Registrados */}
           <div className="dash-kpi-card" onClick={() => navigate("/registro")}>
             <div className="kpi-icon-box kpi-success">
               <Users size={26} />
@@ -147,7 +223,6 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* KPI 4: PQRS Pendientes */}
           <div className="dash-kpi-card" onClick={() => navigate("/pqrs")}>
             <div className="kpi-icon-box kpi-info">
               <MessageSquare size={26} />
@@ -160,68 +235,68 @@ function Dashboard() {
           </div>
         </section>
 
-        {/* LAYOUT DE 2 COLUMNAS (CONTENIDO + BARRA LATERAL) */}
+        {/* LAYOUT DE 2 COLUMNAS */}
         <div className="sicrcb-dash-layout">
-          
-          {/* Columna Principal: Actividad Reciente y Estado del Sistema */}
+          {/* Columna Principal */}
           <div className="dash-main-col">
-            
-            {/* Tarjeta: Actividad Reciente */}
+            {/* Actividad Reciente */}
             <div className="sicrcb-card">
               <div className="sicrcb-card-header">
                 <div className="card-title-group">
                   <Activity size={20} color="#8c3200" />
                   <h3>Actividad Reciente en la Copropiedad</h3>
                 </div>
-                <span className="card-header-badge">Tiempo Real</span>
+                <span
+                  className="card-header-badge"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px"
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      backgroundColor: "#10b981",
+                      display: "inline-block"
+                    }}
+                  />
+                  Tiempo Real
+                </span>
               </div>
 
               <div className="sicrcb-card-body">
                 <div className="dash-timeline">
-                  <div className="timeline-item">
-                    <div className="timeline-icon">
-                      <FileText size={18} />
+                  {actividades.length > 0 ? (
+                    actividades.map((item) => (
+                      <div className="timeline-item" key={item.id}>
+                        <div className="timeline-icon">
+                          {renderActivityIcon(item.tipo)}
+                        </div>
+                        <div className="timeline-content">
+                          <p className="timeline-desc">
+                            <strong>{item.titulo}</strong>
+                            <br />
+                            <small style={{ color: "#735340" }}>{item.detalle}</small>
+                          </p>
+                          <span className="timeline-time">
+                            {formatRelativeTime(item.fecha)}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "1.5rem", color: "#735340" }}>
+                      Sin actividad reciente registrada en el sistema.
                     </div>
-                    <div className="timeline-content">
-                      <p className="timeline-desc">Nueva sanción por convivencia registrada (#2045)</p>
-                      <span className="timeline-time">Hace 2 horas</span>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-icon">
-                      <MessageSquare size={18} />
-                    </div>
-                    <div className="timeline-content">
-                      <p className="timeline-desc">PQR radicada: Mantenimiento de luminarias en torre A1</p>
-                      <span className="timeline-time">Hace 4 horas</span>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-icon">
-                      <MapPin size={18} />
-                    </div>
-                    <div className="timeline-content">
-                      <p className="timeline-desc">Reserva confirmada: Salón Comunal para reunión social</p>
-                      <span className="timeline-time">Hace 6 horas</span>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-icon">
-                      <User size={18} />
-                    </div>
-                    <div className="timeline-content">
-                      <p className="timeline-desc">Nuevo residente acreditado en administración</p>
-                      <span className="timeline-time">Hace 8 horas</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Tarjeta: Estado del Sistema */}
+            {/* Estado de la Plataforma */}
             <div className="sicrcb-card">
               <div className="sicrcb-card-header">
                 <div className="card-title-group">
@@ -234,18 +309,22 @@ function Dashboard() {
               <div className="sicrcb-card-body">
                 <div className="system-health-grid">
                   <div className="health-node">
-                    <Server size={20} color="#8c3200" />
+                    <Server size={20} color={systemStatus.apiOk ? "#16a34a" : "#dc2626"} />
                     <div className="health-node-info">
                       <small>API REST Express</small>
-                      <span>Conectado (200 OK)</span>
+                      <span>{systemStatus.apiOk ? "Conectado (200 OK)" : "Desconectado"}</span>
                     </div>
                   </div>
 
                   <div className="health-node">
-                    <Database size={20} color="#8c3200" />
+                    <Database size={20} color={systemStatus.dbOk ? "#16a34a" : "#dc2626"} />
                     <div className="health-node-info">
                       <small>Base de Datos MySQL</small>
-                      <span>Operativa</span>
+                      <span>
+                        {systemStatus.dbOk
+                          ? `Operativa (${systemStatus.dbLatencyMs}ms)`
+                          : "Error de conexión"}
+                      </span>
                     </div>
                   </div>
 
@@ -260,17 +339,16 @@ function Dashboard() {
                   <div className="health-node">
                     <Clock size={20} color="#8c3200" />
                     <div className="health-node-info">
-                      <small>Último Respaldo</small>
-                      <span style={{ color: "#8c3200" }}>Hoy 02:30 AM</span>
+                      <small>Última Sincronización</small>
+                      <span style={{ color: "#8c3200" }}>{lastSync}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
 
-          {/* Columna Lateral: Accesos Rápidos */}
+          {/* Columna Lateral */}
           <aside className="dash-side-col">
             <div className="sicrcb-card">
               <div className="sicrcb-card-header">
@@ -344,12 +422,9 @@ function Dashboard() {
               </div>
             </div>
           </aside>
-
         </div>
-
       </main>
 
-      {/* Footer Full-Width */}
       <Footer />
     </div>
   );
