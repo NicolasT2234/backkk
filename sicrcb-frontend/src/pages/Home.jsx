@@ -6,11 +6,15 @@ import {
   MessageSquareText as ChatLeftText,
   Megaphone,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  MapPin,
+  Clock,
+  Phone
 } from "lucide-react"
 import "../assets/css/styles.css"
 import "../assets/css/home.css"
 import Logo from "../assets/img/Logo_SICRCB_dark_bg.png"
+import Footer from "../components/Footer.jsx"
 
 function Home() {
   const navigate = useNavigate()
@@ -18,7 +22,7 @@ function Home() {
   return (
     <>
       {/* =========================================================
-          HERO SECTION (Basado en el diseño original mejorado)
+          HERO SECTION (Diseño original SICRCB)
           ========================================================= */}
       <section className="hero-section">
         <Container>
@@ -69,7 +73,7 @@ function Home() {
       <div className="access-notice-bar py-3 text-center">
         <Container>
           <p className="mb-0 small fw-semibold">
-            🔒 <strong>Acceso seguro y protegido:</strong> Por políticas de convivencia de Casa Blanca, las credenciales son asignadas directamente por la Administración.
+            <strong>Acceso seguro y protegido:</strong> Por políticas de convivencia de Casa Blanca, las credenciales son asignadas directamente por la Administración.
           </p>
         </Container>
       </div>
@@ -183,7 +187,7 @@ function Home() {
       </section>
 
       {/* =========================================================
-          CALL TO ACTION (Sin botón ni flujo de registrarse)
+          CALL TO ACTION CON DATOS DE CONTACTO INTEGRADOS
           ========================================================= */}
       <section className="cta-section py-5 text-center">
         <Container>
@@ -205,9 +209,35 @@ function Home() {
             <p className="mt-3 mb-0 small text-muted">
               Si aún no cuentas con tus credenciales, solicítalas en la Oficina de Administración.
             </p>
+
+            {/* Fila de Contacto Directo con el estilo de Casa Blanca */}
+            <div className="mt-4 pt-3 border-top d-flex flex-wrap justify-content-center gap-4 text-start small text-muted">
+              <div className="d-flex align-items-center gap-2">
+                <MapPin size={18} color="#F47820" />
+                <span><strong style={{ color: "#8C3200" }}>Dirección:</strong> Calle 52 Sur #79B-15</span>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <Clock size={18} color="#F47820" />
+                <span><strong style={{ color: "#8C3200" }}>Horarios:</strong> Lun a Sáb: 8:00 a 12:00 y 2:00 a 4:00</span>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <Phone size={18} color="#F47820" />
+                <span>
+                  <strong style={{ color: "#8C3200" }}>Contacto:</strong>{" "}
+                  <a href="tel:+573208524187" style={{ color: "#F47820", fontWeight: "bold", textDecoration: "none" }}>
+                    +57 320 8524187
+                  </a>
+                </span>
+              </div>
+            </div>
           </div>
         </Container>
       </section>
+
+      {/* =========================================================
+          FOOTER INTEGRADO
+          ========================================================= */}
+      <Footer />
     </>
   )
 }

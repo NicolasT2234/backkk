@@ -1,5 +1,4 @@
 // sicrcb-api-gateway/controllers/alquileresController.js
-// ✅ Importa el servicio del Backend, NUNCA la base de datos directamente
 const AlquilerService = require('../../sicrcb-backend/services/AlquilerService');
 
 async function obtenerConfiguracion(req, res, next) {

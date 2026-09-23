@@ -9,17 +9,16 @@ import {
   ShieldAlert,
   ArrowUp,
   MapPin,
-  ExternalLink,
-  HelpCircle,
   FileCheck
 } from "lucide-react"
 import "../assets/css/footer.css"
 
 function Footer({
-  nombreAdministracion = "Conjunto Residencial Casa Blanca · Oficina de Administración",
-  horario = "Lunes a Viernes, 8:00 a.m. – 5:00 p.m.",
+  nombreAdministracion = "Conjunto Residencial Casa Blanca",
+  direccion = "Calle 52 Sur #79B-15",
+  horario = "Lunes a Sábado: 8:00 a.m. – 12:00 m. y 2:00 p.m. – 4:00 p.m.",
   correo = "administracion@conjunto.com",
-  telefono = "(601) 000 0000",
+  telefono = "+57 320 8524187",
   telefonoPorteria = "(601) 000 0001",
   mensajeUrgencia = "Comunícate de inmediato con portería para emergencias, accesos especiales o incidentes 24/7.",
   style = {}
@@ -32,7 +31,6 @@ function Footer({
 
   return (
     <footer className="sicrcb-footer" style={style}>
-      {/* Línea decorativa luminosa superior */}
       <div className="footer-glow-bar" />
 
       <div className="footer-main-wrapper">
@@ -59,7 +57,7 @@ function Footer({
               </div>
             </div>
 
-            {/* Columna 2: Administración y Horarios */}
+            {/* Columna 2: Administración, Ubicación y Horarios */}
             <div className="footer-col">
               <div className="footer-col-title">
                 <div className="col-title-icon">
@@ -70,7 +68,7 @@ function Footer({
               <ul className="footer-info-list">
                 <li>
                   <MapPin size={16} className="info-icon" />
-                  <span>{nombreAdministracion}</span>
+                  <span>{direccion}</span>
                 </li>
                 <li>
                   <Clock size={16} className="info-icon" />
@@ -102,7 +100,7 @@ function Footer({
                 <a href={`tel:${telefono.replace(/[^\d+]/g, "")}`} className="contact-card-link">
                   <Phone size={15} />
                   <div className="contact-card-text">
-                    <small>Línea fija oficina</small>
+                    <small>Contacto del conjunto</small>
                     <span>{telefono}</span>
                   </div>
                 </a>
@@ -131,7 +129,7 @@ function Footer({
 
           </div>
 
-          {/* Barra inferior de Copyright y Enlaces */}
+          {/* Barra inferior */}
           <div className="footer-bottom-bar">
             <div className="bottom-left">
               <span>© {new Date().getFullYear()} <strong>SICRCB</strong> · Conjunto Residencial Casa Blanca.</span>
