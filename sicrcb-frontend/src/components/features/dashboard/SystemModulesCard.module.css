@@ -1,0 +1,56 @@
+.modulesCard {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: white;
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.titleGroup h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #2c3e50;
+}
+
+.cardBody {
+  padding: 1.5rem;
+}
+
+.actionsGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .cardHeader {
+    padding: 1rem 1.25rem;
+  }
+
+  .titleGroup {
+    gap: 0.5rem;
+  }
+
+  .titleGroup h3 {
+    font-size: 1rem;
+  }
+
+  .cardBody {
+    padding: 1rem;
+  }
+
+  .actionsGrid {
+    gap: 0.75rem;
+  }
+}

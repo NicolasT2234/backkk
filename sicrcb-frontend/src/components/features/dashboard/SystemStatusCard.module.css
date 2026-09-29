@@ -1,0 +1,115 @@
+.statusCard {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: white;
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.titleGroup h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #2c3e50;
+}
+
+.cardHeaderBadge {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #6c757d;
+  padding: 0.25rem 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+}
+
+.cardBody {
+  padding: 1.5rem;
+}
+
+.healthGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.healthNode {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+  border: 1px solid #e9ecef;
+}
+
+.healthNodeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.healthNodeIcon > * {
+  font-size: 1.25rem;
+}
+
+.healthNodeInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.healthNodeInfo small {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+}
+
+.healthNodeInfo span {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .cardHeader {
+    padding: 1rem 1.25rem;
+  }
+
+  .titleGroup {
+    gap: 0.5rem;
+  }
+
+  .titleGroup h3 {
+    font-size: 1rem;
+  }
+
+  .cardBody {
+    padding: 1rem;
+  }
+
+  .healthGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .healthNode {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

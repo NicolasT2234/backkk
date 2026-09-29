@@ -1,0 +1,137 @@
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.metricCard {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.metricCard:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.metricCard:active:not(.disabled) {
+  transform: translateY(0);
+}
+
+/* Icon box */
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+}
+
+.iconBox > * {
+  font-size: 1.5rem;
+}
+
+/* Info box */
+.infoBox {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+  color: #6c757d;
+}
+
+.value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  color: #212529;
+}
+
+.subtext {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+/* Variants */
+.warningCard .iconBox {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.warningCard .iconBox > * {
+  color: #ffc107;
+}
+
+.warningCard:hover:not(.disabled) {
+  border-color: rgba(255, 193, 7, 0.2);
+}
+
+.successCard .iconBox {
+  background-color: rgba(25, 135, 84, 0.1);
+}
+
+.successCard .iconBox > * {
+  color: #198754;
+}
+
+.successCard:hover:not(.disabled) {
+  border-color: rgba(25, 135, 84, 0.2);
+}
+
+.infoCard .iconBox {
+  background-color: rgba(13, 202, 240, 0.1);
+}
+
+.infoCard .iconBox > * {
+  color: #0dcaf0;
+}
+
+.infoCard:hover:not(.disabled) {
+  border-color: rgba(13, 202, 240, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .metricsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .metricCard {
+    padding: 1rem;
+  }
+
+  .iconBox {
+    width: 40px;
+    height: 40px;
+  }
+
+  .iconBox > * {
+    font-size: 1.25rem;
+  }
+
+  .value {
+    font-size: 1.75rem;
+  }
+
+  .label, .subtext {
+    font-size: 0.75rem;
+  }
+}
