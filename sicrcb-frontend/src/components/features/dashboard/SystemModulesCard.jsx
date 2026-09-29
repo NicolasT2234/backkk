@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './SystemModulesCard.module.css';
-import { Layers, Newspaper } from "lucide-react";
+import { Layers, Newspaper, FileText, MessageSquare, Home, User } from "lucide-react";
 import ActionButton from "../../ui/ActionButton.jsx";
 
 const SystemModulesCard = ({
