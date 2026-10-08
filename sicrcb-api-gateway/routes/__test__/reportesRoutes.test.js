@@ -93,14 +93,14 @@ describe('Pruebas de Caja Blanca - Módulo Reportes (100% Cobertura)', () => {
     ReporteService.generarPazYSalvoPdf.mockRejectedValueOnce(errMultas);
     const resPaz = await request(app).get('/reportes/residente/paz-y-salvo-pdf').set(...residente);
     expect(resPaz.statusCode).toBe(400);
-    expect(resPaz.text).toContain('Tiene multas pendientes');
+    expect(resPaz.body.toString()).toContain('Tiene multas pendientes');
 
     const errReserva = new Error('No autorizado');
     errReserva.statusCode = 403;
     ReporteService.generarComprobanteReservaPdf.mockRejectedValueOnce(errReserva);
     const resComp = await request(app).get('/reportes/residente/comprobante-reserva-pdf/10').set(...residente);
     expect(resComp.statusCode).toBe(403);
-    expect(resComp.text).toContain('No autorizado');
+    expect(resComp.body.toString()).toContain('No autorizado');
   });
 
   // --- Catch 500 (Ramas sin statusCode) ---

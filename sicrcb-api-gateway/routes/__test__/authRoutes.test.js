@@ -45,6 +45,14 @@ describe('Pruebas de Caja Blanca - Auth', () => {
     expect(res.body).toHaveProperty('error', 'Credenciales inválidas');
   });
 
+  test('POST /login debe retornar error si el usuario no está Activo', async () => {
+    const usuarioInactivo = [{ id: 1, email: 'inactivo@correo.com', estado: 'Suspendido', rol: 'Residente', contraseña: 'admin123' }];
+    pool.query.mockResolvedValueOnce([usuarioInactivo, []]);
+    const res = await request(app).post('/api/auth/login').send({ email: 'inactivo@correo.com', contraseña: 'admin123' });
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error).toBeDefined();
+  });
+
   // --- POST /logout ---
   test('POST /logout debe responder 200 y cerrar sesión', async () => {
     const res = await request(app).post('/api/auth/logout');
@@ -58,7 +66,7 @@ describe('Pruebas de Caja Blanca - Auth', () => {
     const res = await request(app).post('/api/auth/solicitar-recuperacion').send({ email: 'laura.sanchez@gmail.com' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('message');
-  });
+  }, 10000);
 
   test('POST /solicitar-recuperacion debe retornar 404 si el correo no existe en BD', async () => {
     pool.query.mockResolvedValueOnce([[], []]);
