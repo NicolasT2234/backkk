@@ -25,7 +25,12 @@ describe('Pruebas de Caja Negra - Alquiler Residente (UI)', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/usuarios/me', {
       statusCode: 200,
-      body: { id: 2, email: 'residente@casablanca.com', rol: 'Residente', nombres: 'Juan' }
+      body: {
+        id: 2,
+        email: 'residente@casablanca.com',
+        rol: 'Propietario', // <-- DEBE SER 'Propietario' SEGÚN TU App.jsx
+        nombres: 'Juan'
+      }
     });
     cy.visit('/alquiler');
   });

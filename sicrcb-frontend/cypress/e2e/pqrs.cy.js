@@ -25,7 +25,12 @@ describe('Pruebas de Caja Negra - PQRS Residente (UI)', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/usuarios/me', {
       statusCode: 200,
-      body: { id: 2, email: 'residente@casablanca.com', rol: 'Residente', nombres: 'Juan' }
+      body: {
+        id: 2,
+        email: 'residente@casablanca.com',
+        rol: 'Propietario', // <-- Cambiado de 'Residente' a 'Propietario'
+        nombres: 'Juan'
+      }
     });
     cy.visit('/pqrs');
   });
